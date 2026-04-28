@@ -1,9 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { WinstonModule } from 'nest-winston';
+// import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
-import { createWinstonConfig } from './common/logger/winston.config';
+// import { createWinstonConfig } from './common/logger/winston.config';
 import { setupCompression } from './setup/compression.setup';
 import { setupPipes } from './setup/pipes.setup';
 import { setupSecurity } from './setup/security.setup';
@@ -21,10 +21,10 @@ async function bootstrap() {
 
     // app.enableShutdownHooks();
 
-    // setupSecurity(app, configService);
-    // setupCompression(app);
+    setupSecurity(app, configService);
+    setupCompression(app);
     setupPipes(app);
-    // setupSwagger(app, configService);
+    setupSwagger(app, configService);
 
     // All routes follow the pattern: api/v1/{controller-path}/...
     // Swagger /docs, /health, and /metrics are excluded so they stay at root level.

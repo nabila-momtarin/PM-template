@@ -34,3 +34,6 @@ export class TrimPipe implements PipeTransform {
     return value;
   }
 }
+
+
+//Request body/query string এর extra space trim করতে পারে.

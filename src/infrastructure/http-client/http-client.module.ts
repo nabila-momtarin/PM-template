@@ -1,18 +1,18 @@
-import { Module, Global } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
-import { ConfigModule } from '@nestjs/config';
-import { HttpClientService } from './http-client.service';
+// import { Module, Global } from '@nestjs/common';
+// import { HttpModule } from '@nestjs/axios';
+// import { ConfigModule } from '@nestjs/config';
+// import { HttpClientService } from './http-client.service';
 
-@Global()
-@Module({
-  imports: [
-    HttpModule.register({
-      timeout: 10000,
-      maxRedirects: 5,
-    }),
-    ConfigModule,
-  ],
-  providers: [HttpClientService],
-  exports: [HttpClientService],
-})
-export class HttpClientModule {}
+// @Global()
+// @Module({
+//   imports: [
+//     HttpModule.register({
+//       timeout: 10000,
+//       maxRedirects: 5,
+//     }),
+//     ConfigModule,
+//   ],
+//   providers: [HttpClientService],
+//   exports: [HttpClientService],
+// })
+// export class HttpClientModule {}

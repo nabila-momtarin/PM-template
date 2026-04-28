@@ -17,3 +17,5 @@ export class ParseObjectIdPipe implements PipeTransform<string, string> {
     return value;
   }
 }
+
+//MongoDB ObjectId valid কিনা check করে.
