@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-
+import { Types } from 'mongoose';
 /**
  * User Mongoose schema — read-only replica of the user-service collection.
  *
@@ -11,96 +11,45 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
  *   - Only index fields we actively query.
  */
 @Schema({ timestamps: true, collection: 'users' })
-export class User {
-  @Prop({ type: String, index: true })
-  uId: string;
+export class User extends Document{
+  // @Prop({ type: String, /* index: true */ })
+  // uId: string;
 
-  @Prop({ type: String })
-  firstName: string;
-
-  @Prop({ type: String })
-  lastName: string;
-
-  @Prop({ type: String, index: true })
+  @Prop({ type: String, required: true, /* trim: true, */ /*  index: true */ })
   name: string;
 
-  @Prop({ type: String })
-  username: string;
-
-  @Prop({ type: String, index: true })
+  @Prop({ type: String, required: true, unique: true, lowercase: true /*, index: true */ })
   email: string;
 
-  @Prop({ type: String, select: false })
+  @Prop({ type: String /*, index: true */ })
+  phoneNumber: string;
+
+  @Prop({ type: String })
+  photo: string;
+
+  @Prop({ type: String, required: true, select: false })
   password: string;
 
-  @Prop({ type: String, index: true })
-  phone: string;
-
-  @Prop({ type: String, default: null })
-  gender: string;
-
-  @Prop({ type: String, default: null })
-  address: string;
-
-  @Prop({ type: String, default: null })
-  country: string;
-
-  @Prop({ type: String, default: null })
-  birthday: string;
-
-  @Prop({ type: [String], default: [] })
-  businesses: string[];
-
-  @Prop({ type: String, default: null })
-  profileImage: string;
-
-  @Prop({ type: String, index: true })
-  kycStatus: string;
-
-  @Prop({ type: String, index: true })
-  accStatus: string;
-
-  @Prop({ type: String, default: null })
-  kycDocumentType: string;
-
-  @Prop({ type: String, default: null })
-  kycDocumentId: string;
-
-  @Prop({ type: String, default: null })
-  kycDocumentFront: string;
-
-  @Prop({ type: String, default: null })
-  kycDocumentBack: string;
-
-  @Prop({ type: String, default: null })
-  kycExpiryDate: string;
-
-  @Prop({ type: String, default: null })
-  referral: string;
-
-  @Prop({ type: String, default: null })
-  currency: string;
-
-  @Prop({ type: String, default: null })
-  twoFactorSecret: string;
-
-  @Prop({ type: Object, default: {} })
-  roles: Record<string, any>;
-
-  @Prop({ type: [Object], default: [] })
-  phoneUpdateHistory: Record<string, any>[];
-
-  @Prop({ default: false, index: true })
+  @Prop({ type: Types.ObjectId, ref: 'Role', required: true /*, index: true */ })
+  role: Role;
+  
+  @Prop({ type: Boolean, default: false /*, index: true */ })
   isDeleted: boolean;
 
-  @Prop({ default: false })
-  isPhoneVerified: boolean;
+  @Prop({ type: Date, nullable: true })
+  deletedAt: Date;
 
-  @Prop({ type: String, default: null })
-  rejectionReason: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', nullable: true })
+  deletedBy: User;
 
-  @Prop({ type: Date, default: null })
-  verifiedAt: Date;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  createdBy: User;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  updatedBy: User;
+
+
+  
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
