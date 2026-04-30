@@ -7,22 +7,15 @@ import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { LoggerModule } from './common/logger/logger.module';
-import { LoggingMiddleware } from './common/middleware/logging.middleware';
 import configuration from './config/configuration';
-import { MetricsModule } from './infrastructure/metrics/metrics.module';
-import { MetricsMiddleware } from './infrastructure/metrics/metrics.middleware';
 import { AuthModule } from './infrastructure/auth/auth.module';
-import { ClientsModule } from './infrastructure/clients/clients.module';
+// import { ClientsModule } from './infrastructure/clients/clients.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
-import { HttpClientModule } from './infrastructure/http-client/http-client.module';
-import { KafkaModule } from './infrastructure/kafka/kafka.module';
-import { RedisModule } from './infrastructure/redis/redis.module';
+// import { HttpClientModule } from './infrastructure/http-client/http-client.module';
 
 // ─── Feature Modules ────────────────────────────────────────────────────────
 import { UserModule } from './modules/user/user.module'; // ← requires DatabaseModule
-import { BusinessModule } from './modules/business/business.module'; // ← requires DatabaseModule
-import { EnrolledBusinessModule } from './modules/enrolled-business/enrolled-business.module'; // ← requires DatabaseModule
+
 
 @Module({
   imports: [
@@ -45,7 +38,7 @@ import { EnrolledBusinessModule } from './modules/enrolled-business/enrolled-bus
     // ── Infrastructure ─────────────────────────────────────────────────────
     AuthModule,
     DatabaseModule, // ← uncomment when DB is available
-    HttpClientModule,
+    // HttpClientModule,
     // KafkaModule,
     // RedisModule,
     // ClientsModule,
@@ -53,8 +46,6 @@ import { EnrolledBusinessModule } from './modules/enrolled-business/enrolled-bus
     // ── Feature Modules ────────────────────────────────────────────────────
     // Add new feature modules here following the UserModule pattern.
     UserModule, // ← requires DatabaseModule
-    BusinessModule, // ← requires DatabaseModule
-    EnrolledBusinessModule, // ← requires DatabaseModule
   ],
   controllers: [AppController],
   providers: [
@@ -70,8 +61,10 @@ import { EnrolledBusinessModule } from './modules/enrolled-business/enrolled-bus
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggingMiddleware, MetricsMiddleware).forRoutes('*');
-  }
-}
+// export class AppModule implements NestModule {
+//   configure(consumer: MiddlewareConsumer) {
+//     consumer.apply(LoggingMiddleware, MetricsMiddleware).forRoutes('*');
+//   }
+// }
+
+export class AppModule {}

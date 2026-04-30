@@ -1,9 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-// import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
-// import { createWinstonConfig } from './common/logger/winston.config';
 import { setupCompression } from './setup/compression.setup';
 import { setupPipes } from './setup/pipes.setup';
 import { setupSecurity } from './setup/security.setup';
@@ -13,13 +11,10 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   try {
-    const app = await NestFactory.create(AppModule /*, {
-      logger: WinstonModule.createLogger(createWinstonConfig()),
-    }*/);
+    const app = await NestFactory.create(AppModule);
 
     const configService = app.get(ConfigService);
 
-    // app.enableShutdownHooks();
 
     setupSecurity(app, configService);
     setupCompression(app);
