@@ -16,7 +16,6 @@ async function bootstrap() {
 
     const configService = app.get(ConfigService);
 
-
     setupSecurity(app, configService);
     setupCompression(app);
     setupPipes(app);
@@ -26,12 +25,10 @@ async function bootstrap() {
     // Swagger /docs, /health, and /metrics are excluded so they stay at root level.
     app.setGlobalPrefix('api/v1', { exclude: ['docs', 'docs/(.*)', 'health', 'metrics'] });
 
-    const port            = configService.get<number>('port')!;
+    const port = configService.get<number>('port')!;
     // const nodeEnv         = configService.get<string>('NODE_ENV');
     // const swaggerEnabled  = configService.get<string>('SWAGGER_ENABLED') === 'true';
 
-    app.useGlobalInterceptors( new ResponseInterceptor());
-    
     await app.listen(port);
     console.log(`\n\nServer running on http://localhost:${port}/api/v1\n\n`);
 
