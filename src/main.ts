@@ -6,6 +6,7 @@ import { setupCompression } from './setup/compression.setup';
 import { setupPipes } from './setup/pipes.setup';
 import { setupSecurity } from './setup/security.setup';
 import { setupSwagger } from './setup/swagger.setup';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -29,7 +30,10 @@ async function bootstrap() {
     // const nodeEnv         = configService.get<string>('NODE_ENV');
     // const swaggerEnabled  = configService.get<string>('SWAGGER_ENABLED') === 'true';
 
+    app.useGlobalInterceptors( new ResponseInterceptor());
+    
     await app.listen(port);
+    console.log(`\n\nServer running on http://localhost:${port}/api/v1\n\n`);
 
     // logger.log(`Application running on: http://localhost:${port}`);
     // logger.log(`Environment: ${nodeEnv}`);

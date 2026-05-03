@@ -5,7 +5,7 @@ export const getDatabaseConfig = (configService: ConfigService): MongooseModuleO
   console.log(configService, 'configService');
 
   return {
-    uri: configService.get<string>('DATABASE_URL'),
+    uri: configService.getOrThrow<string>('dbUrl'),
     maxPoolSize: 10,  //MongoDB driver একসাথে max 10টা connection maintain করতে পারবে।
     serverSelectionTimeoutMS: 5000,
     // socketTimeoutMS: 45000,

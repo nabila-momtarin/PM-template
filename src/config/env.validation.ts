@@ -5,19 +5,19 @@ export const envValidationSchema = Joi.object({
   SERVER_PORT:      Joi.number().required(),
   // SERVICE_NAME:     Joi.string().required(),    ?
   DATABASE_URL:     Joi.string().required(),
-  JWT_SECRET:       Joi.string().required(),
+  // JWT_SECRET:       Joi.string().required(),
   // SERVICE_ID:       Joi.string().required(),     ?
   // INTERNAL_API_KEY: Joi.string().required(),    ?
 
   // ── App ──────────────────────────────────────────────────────────────────
-  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  // NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
 
   // ── Feature Flags ────────────────────────────────────────────────────────
-  RBAC_ENABLED:    Joi.string().valid('true', 'false').default('false'),
+  // RBAC_ENABLED:    Joi.string().valid('true', 'false').default('false'),
   // SWAGGER_ENABLED: Joi.string().valid('true', 'false').default('false'),    ?
 
   // ── JWT ──────────────────────────────────────────────────────────────────
-  JWT_EXPIRES_IN: Joi.string().default('24h'),
+  // JWT_EXPIRES_IN: Joi.string().default('24h'),
 
   // ── Redis ────────────────────────────────────────────────────────────────
   // REDIS_HOST: Joi.string().default('localhost'),
@@ -32,7 +32,7 @@ export const envValidationSchema = Joi.object({
   // ── External Services (optional) ─────────────────────────────────────────
   // BILLING_SERVICE_URL:      Joi.string().uri().optional(),
   // BUSINESS_SERVICE_URL:     Joi.string().uri().optional(),
-  NOTIFICATION_SERVICE_URL: Joi.string().uri().optional(),
+  // NOTIFICATION_SERVICE_URL: Joi.string().uri().optional(),
   // SUBSCRIPTION_SERVICE_URL: Joi.string().uri().optional(),
   // VBS_SERVICE_URL:          Joi.string().uri().optional(),
   // META_SERVICE_URL:         Joi.string().uri().optional(),

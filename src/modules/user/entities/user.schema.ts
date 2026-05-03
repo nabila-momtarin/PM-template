@@ -30,8 +30,8 @@ export class User extends Document{
   @Prop({ type: String, required: true, select: false })
   password: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Role', required: true /*, index: true */ })
-  role: Role;
+  // @Prop({ type: Types.ObjectId, ref: 'Role', required: true /*, index: true */ })
+  // role: Role;
   
   @Prop({ type: Boolean, default: false /*, index: true */ })
   isDeleted: boolean;
