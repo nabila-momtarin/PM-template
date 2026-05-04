@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 import { ProjectType } from "src/common/enums/project-type.enum";
 
 
@@ -13,17 +13,17 @@ export class Project {
     @Prop({ type: String})
     description?: string;
 
-    @Prop({ type: String, enum: ProjectType })
-    type: ProjectType;
+    @Prop({ type: String, enum: Object.values(ProjectType) })
+    type?: ProjectType;
 
     @Prop({ type: String})
-    repositoryURL: string;
+    repositoryURL?: string;
 
-//     @Prop({ type: ---, required: true})
-//     createdBy: ---;
+    @Prop({ type: Types.ObjectId, required: true})
+    createdBy?: Types.ObjectId;
 
-// @Prop({ type: ---, required: true})
-//     updatedBy: ---;
+    @Prop({ type: Types.ObjectId, required: true})
+    updatedBy?: Types.ObjectId;
 
     @Prop({ type: Boolean, default: false })
     isDeleted: boolean;

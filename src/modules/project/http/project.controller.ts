@@ -34,7 +34,6 @@ export class ProjectController {
     return result;
   }
 
-
   @Delete(':projectId')
   async deleteByIdProject(@Param('projectId') projectId: string) {
     console.log('Project CONTROLLER: deleteByIdProject\n');
@@ -44,12 +43,17 @@ export class ProjectController {
     return result;
   }
 
-
   @Patch(':projectId')
   async updateProject(
-    @Param('projectId') projectId: string ,
-    @Body() updateProjectDto: UpdateProjectDto) {
-        console.log('Project CONTROLLER: updateProject\n');
-  }
+    @Param('projectId') projectId: string,
+    @Body() updateProjectDto: UpdateProjectDto,
+  ) {
+    console.log('Project CONTROLLER: updateProject\n');
 
+    const result = await this.projectService.updateProject(projectId, updateProjectDto);
+
+    console.log(`Updated Project: SERVICE: ${result}`);
+
+    return result;
+  }
 }

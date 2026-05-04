@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from './project.repository';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { ProjectDocument } from './entities/project.schema';
-import { title } from 'process';
+import { UpdateProjectDto } from './dto/update-project.dto';
+
 
 @Injectable()
 export class ProjectService {
@@ -85,5 +85,34 @@ export class ProjectService {
       };
     }
 
+    async updateProject(projectId: string, updateProjectDto: UpdateProjectDto) {
+      console.log('Project SERVICE: updateProject\n');
+
+      console.log("updateProjectDto: SERVICE: ", updateProjectDto);
+
+      // if(!updateProjectDto) {
+      //   console.log('No updates provided');
+      //   throw new NotFoundException('No updates provided');
+      // }
+
+      const updatedProject = await this.projectRepository.updateByID(
+        projectId,
+        updateProjectDto
+      );
+
+      console.log("updatedProject: SERVICE : ", updatedProject);
+
+      if(!updatedProject) {
+        console.log('Project Not Found');
+        throw new NotFoundException('Project not found');
+      }
+
+      return {
+        success: true,
+        message: 'Project updated successfully',
+        data: updatedProject,
+      }
+
+    }
     
   }
