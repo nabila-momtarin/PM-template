@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { ProjectService } from '../project.service';
 import { UpdateProjectDto } from '../dto/update-project.dto';
+import { ProjectQueryDto } from '../dto/getAll-project.dto';
 
 @Controller('projects')
 export class ProjectController {
@@ -17,10 +18,10 @@ export class ProjectController {
   }
 
   @Get()
-  async findAll() {
+  async findAll(@Query() query: ProjectQueryDto) {
     console.log('Project CONTROLLER: findAll\n');
 
-    const result = await this.projectService.findAll();
+    const result = await this.projectService.findAll(query);
 
     return result;
   }

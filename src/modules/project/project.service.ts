@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from './project.repository';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProjectQueryDto } from './dto/getAll-project.dto';
 
 
 @Injectable()
@@ -27,19 +28,47 @@ export class ProjectService {
   }
 
 
-  async findAll() {
+  async findAll( query : ProjectQueryDto) {
     console.log('Project SERVICE: findAll\n');
 
-    const projects = await this.projectRepository.find();
+    // const filter =this.projectRepository.
+    console.log("\n\nQuery: SERVICE: ", query);
+
+    const projects = await this.projectRepository.getAllData({
+      filter: this.buildProjectFilter(query),
+      sortStr : query.sort ?? '-createdAt',
+      page: String(query.page ?? 1),
+      length: String(query.limit ?? query.length ??  10),
+      filterableFields: ['type', 'title']
+
+    });
     
     console.log("projects: SERVICE: ", projects);
 
     return {
       success: true,
       message: 'Project fetched successfully',
-      data: projects,
+      data: projects.data,
+      pagination: projects.pagination
     }; 
+  }
 
+  private buildProjectFilter(query: ProjectQueryDto):string {
+    if( query.filter){
+      return query.filter;
+    }
+
+    const and: Record<string, unknown> = {};
+
+    if (query.type) {
+      and.type__eq = query.type;
+    }
+
+    if(query.search?.trim()) {
+      and.title__like = query.search.trim();
+    }
+
+    return Object.keys(and).length > 0 ? JSON.stringify({ and }) : '{}';
   }
 
   async getProjectById( projectId : string) {
