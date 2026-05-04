@@ -21,4 +21,5 @@ export class ProjectQueryDto extends PaginationQueryDto {
 }
 
 
+// feat: implement project query functionality; enhance findAll method with filtering and pagination 
 // feat: add logging for updated project in updateProject method; handle not found case
