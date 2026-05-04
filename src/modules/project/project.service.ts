@@ -100,12 +100,14 @@ export class ProjectService {
         updateProjectDto
       );
 
-      console.log("updatedProject: SERVICE : ", updatedProject);
 
       if(!updatedProject) {
         console.log('Project Not Found');
         throw new NotFoundException('Project not found');
       }
+
+            console.log("updatedProject: SERVICE : ", updatedProject);
+
 
       return {
         success: true,
