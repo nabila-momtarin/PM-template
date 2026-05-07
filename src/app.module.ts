@@ -10,6 +10,7 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 
 // ─── Feature Modules ────────────────────────────────────────────────────────
 import { ProjectModule } from './modules/project/project.module';
+import { PermissionModule } from './modules/permission/permission.module';
 
 
 @Module({
@@ -29,6 +30,7 @@ import { ProjectModule } from './modules/project/project.module';
     // ── Infrastructure ─────────────────────────────────────────────────────
     // AuthModule,
     DatabaseModule, // ← uncomment when DB is available
+    PermissionModule,
 
 
     // ── Feature Modules ────────────────────────────────────────────────────
