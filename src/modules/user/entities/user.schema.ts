@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
+// import { Types } from 'mongoose';
+import {  HydratedDocument, Types } from 'mongoose';
 /**
  * User Mongoose schema — read-only replica of the user-service collection.
  *
@@ -10,8 +11,10 @@ import { Types } from 'mongoose';
  *   - password is excluded from query results by default (select: false).
  *   - Only index fields we actively query.
  */
+export type UserDocument = HydratedDocument<User>;
+
 @Schema({ timestamps: true, collection: 'users' })
-export class User extends Document{
+export class User/*  extends Document */{
   // @Prop({ type: String, /* index: true */ })
   // uId: string;
 

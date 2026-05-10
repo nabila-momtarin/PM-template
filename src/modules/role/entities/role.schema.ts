@@ -32,11 +32,6 @@ export class Role {
     })
     permissions: RolePermission[];
 
-    // @Prop()
-    // permissions[].method: string;
-
-    // @Prop()
-    // permissions[].path: string;
 
     @Prop({ type: Boolean, default: false })
     isSuperAdmin: boolean;
@@ -53,8 +48,8 @@ export class Role {
     @Prop({ type: Date, default: null })
     deletedAt?: Date | null;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-    deletedBy?: User;
+    @Prop({ type: Types.ObjectId, ref: User.name, default: null })
+    deletedBy?: Types.ObjectId | null;
 }
 
 export const RoleSchema = SchemaFactory.createForClass(Role);
