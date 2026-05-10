@@ -1,6 +1,7 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { RoleService } from "../role.service";
 import { CreateRoleDto } from "../dto/create-role.dto";
+import { RolesQueryDto } from "../dto/getAll-roles.dto";
 
 
 @Controller('roles')
@@ -12,5 +13,13 @@ export class RoleController {
         console.log('CONTROLLER: Creating a new role\n');
 
         return await this.roleService.createRole(createRoleDto);
+    }
+
+    @Get()
+    async getAllRoles(@Query() query: RolesQueryDto) {
+        console.log('CONTROLLER: Fetching all roles\n');
+
+        return this.roleService.getAllRoles(query);
+
     }
 }
