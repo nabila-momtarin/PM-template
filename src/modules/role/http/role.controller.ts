@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { RoleService } from "../role.service";
 import { CreateRoleDto } from "../dto/create-role.dto";
 import { RolesQueryDto } from "../dto/getAll-roles.dto";
+import { UpdateRoleDto } from "../dto/update-role.dto";
 
 
 @Controller('roles')
@@ -35,5 +36,12 @@ export class RoleController {
         console.log('CONTROLLER: Deleting role by ID\n');
 
         return this.roleService.deleteRole(roleId);
+    }
+
+    @Patch(':roleId')
+    async updateRole(@Param('roleId') roleId: string, @Body() updateRoleDto: UpdateRoleDto) {
+        console.log('CONTROLLER: Updating role by ID\n');
+
+        return this.roleService.updateRole(roleId, updateRoleDto);
     }
 }

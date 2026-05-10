@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import { IsArray, IsNotEmpty, IsString } from "class-validator";
 import { RolePermission } from "src/modules/permission/types/permissions.type";
+import { RolePermissionDto } from "./role-permission.dto";
 
 export class CreateRoleDto {
     @IsString()
@@ -9,7 +10,7 @@ export class CreateRoleDto {
 
     @IsArray()
     @IsNotEmpty({ each: true })
-    // @Type(() => RolePermissionDto)
-    permissions: RolePermission[];
+    @Type(() => RolePermissionDto)
+    permissions: RolePermissionDto[];
 
 }
