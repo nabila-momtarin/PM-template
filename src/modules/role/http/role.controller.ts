@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { RoleService } from "../role.service";
 import { CreateRoleDto } from "../dto/create-role.dto";
 import { RolesQueryDto } from "../dto/getAll-roles.dto";
@@ -28,5 +28,12 @@ export class RoleController {
         console.log('CONTROLLER: Fetching role by ID\n');
 
         return this.roleService.getRoleById(roleId);
+    }
+
+    @Delete(':roleId')
+    async deleteRole(@Param('roleId') roleId: string) {
+        console.log('CONTROLLER: Deleting role by ID\n');
+
+        return this.roleService.deleteRole(roleId);
     }
 }
