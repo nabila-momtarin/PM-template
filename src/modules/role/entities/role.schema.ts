@@ -14,7 +14,7 @@ export class Role {
     @Prop({
         type: [
             {
-                // _id: false,
+                 _id: false,
                 method: {
                     type: String,
                     enum: ['GET', 'POST', 'PATCH', 'DELETE'],

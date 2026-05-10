@@ -49,6 +49,29 @@ export class RoleService {
             pagination: allRoles.pagination
         };
     }
+
+    async getRoleById(roleId: string) {
+        console.log('SERVICE: Fetching role by ID\n');
+
+        const role = await this.roleRepository.findById({ id: roleId});
+
+        if(!role) {
+            console.log('Role not found: SERVICE: ', roleId);
+            return {
+                success: false,
+                message: 'Role not found',
+                data: null
+            };
+        }
+
+        console.log('role: SERVICE: ', role);
+
+        return {
+            success: true,
+            message: 'Role fetched successfully',
+            data: role
+        };
+    }
 }
 //  filter: any;
 //   sortStr: string;
