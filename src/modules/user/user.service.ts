@@ -6,6 +6,7 @@ import { Types } from 'mongoose';
 import { RoleRepository } from '../role/role.repository';
 import * as argon2 from 'argon2';
 import { UsersQueryDto } from './dto/getAll-users.dto';
+import { UpdateUserDto } from './dto/admin-update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -129,6 +130,27 @@ export class UserService {
                 id: id,
                 name: deletedUser.name,
             }
+        };
+    }
+
+    async updateUser(id: string, dto: UpdateUserDto) {
+        console.log('SERVICE : user : updateUser\n');
+
+        const userExist = await this.userRepository.findById({ id, useLean: true });
+
+        if (!userExist) {
+            console.error('User not found: ', id);
+            throw new NotFoundException('User not found');
+        }
+
+
+        const updatedUser = await this.userRepository.updateByID(id, dto);
+
+        console.log('updatedUser: SERVICE: ', updatedUser);
+        return {
+            success: true,
+            message: 'User updated successfully',
+            data: updatedUser,
         };
     }
 }

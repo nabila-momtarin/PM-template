@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { UserService } from "../../user.service";
 import { CreateUserDto } from "../../dto/admin-create-user.dto";
 import { UsersQueryDto } from "../../dto/getAll-users.dto";
+import { UpdateUserDto } from "../../dto/admin-update-user.dto";
 
 @Controller('/users')
 export class AdminController {
@@ -36,4 +37,11 @@ export class AdminController {
 
         return this.userService.deleteUser(id);
         }
+
+    @Patch(':id')
+    async updateUser(@Param('id') id: string , @Body() dto: UpdateUserDto) {
+        console.log("CONTROLLER : admin : update user\n");
+
+        return this.userService.updateUser(id, dto);
+    }
 }
