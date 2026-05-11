@@ -4,6 +4,8 @@ import { UserRepository } from './user.repository';
 import { UserDocument } from './entities/user.schema';
 import { Types } from 'mongoose';
 import { RoleRepository } from '../role/role.repository';
+import * as argon2 from 'argon2';
+import { UsersQueryDto } from './dto/getAll-users.dto';
 
 @Injectable()
 export class UserService {
@@ -12,9 +14,8 @@ export class UserService {
         private readonly roleRepository: RoleRepository,
     ) { }
 
-    async createUser(dto: CreateUserDto) {
+    async createUser(dto: CreateUserDto/* , authUserId: string */)  {
         console.log('SERVICE : user : createUser\n');
-        console.log('DTO : ', dto, '\n');
 
         //email existence check
         const existingUser = await this.userRepository.findOne({
@@ -35,13 +36,19 @@ export class UserService {
             throw new NotFoundException('Role not found');
         }
 
+        //password hashing
+        const hashedPassword = await argon2.hash(dto.password);
+
         //make proper payload for user creation
         const userPayload: Partial<UserDocument> = {
             ...dto,
+            password: hashedPassword,
             role: new Types.ObjectId(dto.role),
+            // createdBy: new Types.ObjectId(authUserId),
         };
 
-        const newUser = await this.userRepository.createOne(userPayload);
+        //creatae user
+        const newUser: any = (await this.userRepository.createOne(userPayload));
 
         if (!newUser) {
             console.error('Failed to create user');
@@ -49,11 +56,32 @@ export class UserService {
         }
         console.log('New User Created : ', newUser, '\n');
 
+        //Mongoose document theke plain obj banaite to remove password from the response, and also to remove all the mongoose document methods and properties
+        //remove password from the response
+        const userObj = newUser.toObject();
+        delete userObj.password;
+        delete userObj.__v; // remove __v field added by mongoose
+
         return {
             success: true,
             message: 'User created successfully',
-            data: newUser,
+            data: userObj,
         }
 
+    }
+
+    async getAllUsers(query: UsersQueryDto) {
+        console.log('SERVICE : user : allUsers\n');
+
+        const allUsers = await this.userRepository.getAllData({
+            filter: query.filter ?? '{}',
+            sortStr: query.sort ?? '-createdAt',
+            page: String(query.page ?? 1),
+            length: String( query.limit ?? query.length ?? 10),
+            useLean: true,
+        });
+
+        console.log('All users: SERVICE: ', allUsers);
+        return allUsers;
     }
 }

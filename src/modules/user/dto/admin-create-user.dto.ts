@@ -1,4 +1,4 @@
-import { Transform } from "class-transformer";
+import { Exclude, Transform } from "class-transformer";
 import { MinLength, MaxLength, IsNotEmpty, IsString, IsEmail, IsStrongPassword, IsMongoId, IsOptional, Matches, IsUrl } from "class-validator";
 
 export class CreateUserDto {
@@ -33,6 +33,7 @@ export class CreateUserDto {
         minNumbers: 1,
         minSymbols: 1,
     })
+    // @Exclude({ toPlainOnly: true })
     password: string;
 
     @IsNotEmpty()

@@ -1,6 +1,7 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { UserService } from "../../user.service";
 import { CreateUserDto } from "../../dto/admin-create-user.dto";
+import { UsersQueryDto } from "../../dto/getAll-users.dto";
 
 @Controller('/users')
 export class AdminController {
@@ -12,5 +13,12 @@ export class AdminController {
         console.log("CONTROLLER : admin : createUser\n");
 
         return this.userService.createUser(dto);
+    }
+
+    @Get()
+    async allUsers(@Query() query: UsersQueryDto) {
+        console.log("CONTROLLER : admin : allUsers\n");
+        
+        return this.userService.getAllUsers(query);
     }
 }
