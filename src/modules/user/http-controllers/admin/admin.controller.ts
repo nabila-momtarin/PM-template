@@ -18,7 +18,15 @@ export class AdminController {
     @Get()
     async allUsers(@Query() query: UsersQueryDto) {
         console.log("CONTROLLER : admin : allUsers\n");
-        
+
         return this.userService.getAllUsers(query);
+    }
+
+    @Get(':id')
+    async getUserById(@Param('id') id: string) {
+        console.log("CONTROLLER : admin : getUser\n");
+
+        return this.userService.getAUser(id);
+        
     }
 }

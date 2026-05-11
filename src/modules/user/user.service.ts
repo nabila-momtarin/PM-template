@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Param } from '@nestjs/common';
 import { CreateUserDto } from './dto/admin-create-user.dto';
 import { UserRepository } from './user.repository';
 import { UserDocument } from './entities/user.schema';
@@ -83,5 +83,30 @@ export class UserService {
 
         console.log('All users: SERVICE: ', allUsers);
         return allUsers;
+    }
+
+    async getAUser(id: string)  {
+        console.log('SERVICE : user : getAUser\n');
+
+        const user = await this.userRepository.findById({ 
+            id,
+            useLean: true,
+             select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt',
+             populate: {
+                path : 'role',
+                select: 'roleName permissions',
+             },
+        });
+
+        if (!user) {
+            console.error('User not found: ', id);
+            throw new NotFoundException('User not found');
+        }
+
+        console.log('user: SERVICE: ', user);
+        return { 
+            success: true, 
+            message: 'User fetched successfully',
+            data: user};
     }
 }
