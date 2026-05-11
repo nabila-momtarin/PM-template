@@ -14,7 +14,7 @@ export class UserService {
         private readonly roleRepository: RoleRepository,
     ) { }
 
-    async createUser(dto: CreateUserDto/* , authUserId: string */)  {
+    async createUser(dto: CreateUserDto/* , authUserId: string */) {
         console.log('SERVICE : user : createUser\n');
 
         //email existence check
@@ -77,7 +77,7 @@ export class UserService {
             filter: query.filter ?? '{}',
             sortStr: query.sort ?? '-createdAt',
             page: String(query.page ?? 1),
-            length: String( query.limit ?? query.length ?? 10),
+            length: String(query.limit ?? query.length ?? 10),
             useLean: true,
         });
 
@@ -85,17 +85,17 @@ export class UserService {
         return allUsers;
     }
 
-    async getAUser(id: string)  {
+    async getAUser(id: string) {
         console.log('SERVICE : user : getAUser\n');
 
-        const user = await this.userRepository.findById({ 
+        const user = await this.userRepository.findById({
             id,
             useLean: true,
-             select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt',
-             populate: {
-                path : 'role',
+            select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt',
+            populate: {
+                path: 'role',
                 select: 'roleName permissions',
-             },
+            },
         });
 
         if (!user) {
@@ -104,9 +104,31 @@ export class UserService {
         }
 
         console.log('user: SERVICE: ', user);
-        return { 
-            success: true, 
+        return {
+            success: true,
             message: 'User fetched successfully',
-            data: user};
+            data: user
+        };
+    }
+
+    async deleteUser(id: string) {
+        console.log('SERVICE : user : deleteUser\n');
+
+        const deletedUser = await this.userRepository.deleteById(id);
+
+        if (!deletedUser) {
+            console.error('User not found: ', id);
+            throw new NotFoundException('User not found');
+        }
+
+        console.log('deletedUser: SERVICE: ', deletedUser);
+        return {
+            success: true,
+            message: 'User deleted successfully',
+            data: {
+                id: id,
+                name: deletedUser.name,
+            }
+        };
     }
 }

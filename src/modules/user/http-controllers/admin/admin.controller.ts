@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { UserService } from "../../user.service";
 import { CreateUserDto } from "../../dto/admin-create-user.dto";
 import { UsersQueryDto } from "../../dto/getAll-users.dto";
@@ -29,4 +29,11 @@ export class AdminController {
         return this.userService.getAUser(id);
         
     }
+    
+    @Delete(':id')
+    async deleteUser(@Param('id') id: string) {
+        console.log("CONTROLLER : admin : delete user\n");
+
+        return this.userService.deleteUser(id);
+        }
 }
