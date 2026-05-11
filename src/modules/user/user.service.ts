@@ -1,12 +1,13 @@
-import { ConflictException, Injectable, NotFoundException, Param } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Param } from '@nestjs/common';
 import { CreateUserDto } from './dto/admin-create-user.dto';
 import { UserRepository } from './user.repository';
 import { UserDocument } from './entities/user.schema';
 import { Types } from 'mongoose';
 import { RoleRepository } from '../role/role.repository';
 import * as argon2 from 'argon2';
-import { UsersQueryDto } from './dto/getAll-users.dto';
+import { UsersQueryDto } from './dto/admin-getAll-users.dto';
 import { UpdateUserDto } from './dto/admin-update-user.dto';
+import { ResetPasswordDto } from './dto/admin-reset-password.dto';
 
 @Injectable()
 export class UserService {
@@ -15,7 +16,7 @@ export class UserService {
         private readonly roleRepository: RoleRepository,
     ) { }
 
-    async createUser(dto: CreateUserDto/* , authUserId: string */) {
+    async createUser(dto: CreateUserDto /* , authUserId: string */) {
         console.log('SERVICE : user : createUser\n');
 
         //email existence check
@@ -49,7 +50,7 @@ export class UserService {
         };
 
         //creatae user
-        const newUser: any = (await this.userRepository.createOne(userPayload));
+        const newUser: any = await this.userRepository.createOne(userPayload);
 
         if (!newUser) {
             console.error('Failed to create user');
@@ -67,8 +68,7 @@ export class UserService {
             success: true,
             message: 'User created successfully',
             data: userObj,
-        }
-
+        };
     }
 
     async getAllUsers(query: UsersQueryDto) {
@@ -108,7 +108,7 @@ export class UserService {
         return {
             success: true,
             message: 'User fetched successfully',
-            data: user
+            data: user,
         };
     }
 
@@ -129,7 +129,7 @@ export class UserService {
             data: {
                 id: id,
                 name: deletedUser.name,
-            }
+            },
         };
     }
 
@@ -143,7 +143,6 @@ export class UserService {
             throw new NotFoundException('User not found');
         }
 
-
         const updatedUser = await this.userRepository.updateByID(id, dto);
 
         console.log('updatedUser: SERVICE: ', updatedUser);
@@ -151,6 +150,38 @@ export class UserService {
             success: true,
             message: 'User updated successfully',
             data: updatedUser,
+        };
+    }
+
+    async resetPassword(id: string, dto: ResetPasswordDto) {
+        console.log('SERVICE : user : resetPassword\n');
+
+        const userExist = await this.userRepository.findById({ id, useLean: true });
+
+        if (!userExist) {
+            console.log('User not found: ', id);
+            throw new NotFoundException('User not found');
+        }
+
+        if (dto.newPassword !== dto.confirmPassword) {
+            console.log('Passwords does not match');
+            throw new BadRequestException('Passwords does not match');
+        }
+
+        const hashedPassword = await argon2.hash(dto.newPassword);
+
+        await this.userRepository.updateByID(
+            id,
+            {
+                password: hashedPassword
+            }
+        );
+
+        console.log('updatePassword: SERVICE: ', id);
+        return {
+            success: true,
+            message: 'Password updated successfully',
+            data: null,
         };
     }
 }
