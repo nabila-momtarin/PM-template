@@ -12,6 +12,7 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 import { ProjectModule } from './modules/project/project.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
+import { UserModule } from './modules/user/user.module';
 
 
 @Module({
@@ -26,18 +27,18 @@ import { RoleModule } from './modules/role/role.module';
       // validationOptions: { abortEarly: false },
     }),
 
-
-    ProjectModule,
     // ── Infrastructure ─────────────────────────────────────────────────────
     // AuthModule,
     DatabaseModule, // ← uncomment when DB is available
-    PermissionModule,
-    RoleModule,
-
 
     // ── Feature Modules ────────────────────────────────────────────────────
     // Add new feature modules here following the UserModule pattern.
     // UserModule, // ← requires DatabaseModule
+    PermissionModule,
+    RoleModule,
+    UserModule,
+    ProjectModule,
+    
   ],
   controllers: [AppController],
   providers: [
@@ -59,4 +60,4 @@ import { RoleModule } from './modules/role/role.module';
 //   }
 // }
 
-export class AppModule {}
+export class AppModule { }

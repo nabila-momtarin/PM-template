@@ -1,54 +1,59 @@
-// import { Injectable, Logger } from '@nestjs/common';
-// import { UserInfo, UserMutationEvent } from 'src/infrastructure/kafka/events';
-// import { UserRepository } from './user.repository';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateUserDto } from './dto/admin-create-user.dto';
+import { UserRepository } from './user.repository';
+import { UserDocument } from './entities/user.schema';
+import { Types } from 'mongoose';
+import { RoleRepository } from '../role/role.repository';
 
-// @Injectable()
-// export class UserService {
-//   private readonly logger = new Logger(UserService.name);
+@Injectable()
+export class UserService {
+    constructor(
+        private readonly userRepository: UserRepository,
+        private readonly roleRepository: RoleRepository,
+    ) { }
 
-//   constructor(private readonly userRepository: UserRepository) {}
+    async createUser(dto: CreateUserDto) {
+        console.log('SERVICE : user : createUser\n');
+        console.log('DTO : ', dto, '\n');
 
-//   async handleMutation(event: UserMutationEvent): Promise<void> {
-//     const { type, userInfo, serviceId } = event;
+        //email existence check
+        const existingUser = await this.userRepository.findOne({
+            filters: { email: dto.email },
+            useLean: true,
+        });
 
-//     switch (type) {
-//       case 'USER_CREATED':
-//         await this.onCreate(userInfo, serviceId);
-//         break;
+        if (existingUser) {
+            console.error('User already exists');
+            throw new ConflictException('User with this email already exists');
+        }
 
-//       case 'USER_UPDATED':
-//         await this.onUpdate(userInfo, serviceId);
-//         break;
+        //roll existence check
+        const roleExists = await this.roleRepository.findById({ id: dto.role, useLean: true });
 
-//       case 'USER_DELETED':
-//         await this.onDelete(userInfo, serviceId);
-//         break;
+        if (!roleExists) {
+            console.error('Role not found: ', dto.role);
+            throw new NotFoundException('Role not found');
+        }
 
-//       default:
-//         this.logger.warn(`Unknown user mutation type: ${type}`);
-//     }
-//   }
+        //make proper payload for user creation
+        const userPayload: Partial<UserDocument> = {
+            ...dto,
+            role: new Types.ObjectId(dto.role),
+        };
 
-//   private async onCreate(userInfo: UserInfo, serviceId: string): Promise<void> {
-//     await this.userRepository.createOne(userInfo as any);
-//     this.logger.log(`User created [uId=${userInfo.uId}, serviceId=${serviceId}]`);
-//   }
+        const newUser = await this.userRepository.createOne(userPayload);
 
-//   private async onUpdate(userInfo: UserInfo, serviceId: string): Promise<void> {
-//     const { _id, id: idField, ...rest } = userInfo;
-//     const id = _id ?? idField;
+        if (!newUser) {
+            console.error('Failed to create user');
+            throw new Error('Failed to create user');
+        }
+        console.log('New User Created : ', newUser, '\n');
 
-//     if (!id) {
-//       this.logger.warn(`USER_UPDATED missing id [serviceId=${serviceId}]`);
-//       return;
-//     }
+        return {
+            success: true,
+            message: 'User created successfully',
+            data: newUser,
+        }
 
-//     await this.userRepository.updateByID(id, { $set: rest });
-//     this.logger.log(`User updated [id=${id}, serviceId=${serviceId}]`);
-//   }
-
-//   private async onDelete(userInfo: UserInfo, serviceId: string): Promise<void> {
-//     // TODO: implement delete/soft-delete logic when required
-//     this.logger.log(`USER_DELETED received [uId=${userInfo.uId}, serviceId=${serviceId}] — no-op`);
-//   }
-// }
+    }
+}

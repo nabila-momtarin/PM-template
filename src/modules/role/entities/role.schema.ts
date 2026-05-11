@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
+import { MODEL_NAMES } from "src/common/constants/model-names.constant";
 import { RolePermission } from "src/modules/permission/types/permissions.type";
-import { User } from "src/modules/user/entities/user.schema";
 
 
 export type RoleDocument = HydratedDocument<Role>;
@@ -36,10 +36,10 @@ export class Role {
     @Prop({ type: Boolean, default: false })
     isSuperAdmin: boolean;
 
-    @Prop({ type: Types.ObjectId, ref: User.name })
+    @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER })
     createdBy?: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, ref: User.name })
+    @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER })
     updatedBy?: Types.ObjectId;
 
     @Prop({ type: Boolean, default: false })
@@ -48,7 +48,7 @@ export class Role {
     @Prop({ type: Date, default: null })
     deletedAt?: Date | null;
 
-    @Prop({ type: Types.ObjectId, ref: User.name, default: null })
+    @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER, default: null })
     deletedBy?: Types.ObjectId | null;
 }
 
