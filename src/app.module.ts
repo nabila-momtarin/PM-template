@@ -13,6 +13,7 @@ import { ProjectModule } from './modules/project/project.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { UserModule } from './modules/user/user.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 
 @Module({
@@ -38,6 +39,7 @@ import { UserModule } from './modules/user/user.module';
     RoleModule,
     UserModule,
     ProjectModule,
+    AuthModule,
     
   ],
   controllers: [AppController],

@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query } from '@nestjs/common';
-import { UserService } from '../../user.service';
+import { UserService } from '../../admin.service';
 import { CreateUserDto } from '../../dto/admin-create-user.dto';
 import { UsersQueryDto } from '../../dto/admin-getAll-users.dto';
 import { UpdateUserDto } from '../../dto/admin-update-user.dto';
@@ -7,12 +7,11 @@ import { ResetPasswordDto } from '../../dto/admin-reset-password.dto';
 
 @Controller('/users')
 export class AdminController {
-  constructor(private readonly userService: UserService,) { }
+  constructor(private readonly userService: UserService) {}
   private logger = new Logger(AdminController.name);
 
   @Post()
   async createUser(@Body() dto: CreateUserDto) {
-    
     this.logger.debug('CONTROLLER : admin : createUser\n');
 
     return this.userService.createUser(dto);
@@ -46,12 +45,10 @@ export class AdminController {
     return this.userService.updateUser(id, dto);
   }
 
-
   @Patch(':id/reset-password')
   async resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
     console.log('CONTROLLER : admin : resetPassword\n');
 
     return this.userService.resetPassword(id, dto);
   }
-
 }
