@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, Param } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Param } from '@nestjs/common';
 import { CreateUserDto } from './dto/admin-create-user.dto';
 import { UserRepository } from './user.repository';
 import { UserDocument } from './entities/user.schema';
@@ -16,6 +16,8 @@ export class UserService {
         private readonly roleRepository: RoleRepository,
     ) { }
 
+    private logger = new Logger(UserService.name);
+
     async createUser(dto: CreateUserDto /* , authUserId: string */) {
         console.log('SERVICE : user : createUser\n');
 
@@ -26,7 +28,7 @@ export class UserService {
         });
 
         if (existingUser) {
-            console.error('User already exists');
+            this.logger.error('User already exists');
             throw new ConflictException('User with this email already exists');
         }
 
@@ -56,7 +58,7 @@ export class UserService {
             console.error('Failed to create user');
             throw new Error('Failed to create user');
         }
-        console.log('New User Created : ', newUser, '\n');
+        this.logger.debug('New User Created : ', newUser, '\n');
 
         //Mongoose document theke plain obj banaite to remove password from the response, and also to remove all the mongoose document methods and properties
         //remove password from the response
