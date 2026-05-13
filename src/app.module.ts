@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { envValidationSchema } from './config/env.validation';
 import { AppController } from './app.controller';
@@ -14,6 +14,8 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { RoleModule } from './modules/role/role.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { JwtAuthGuard } from './infrastructure/auth/guards/jwt-auth.guard';
+import { AuthInfrastructureModule } from './infrastructure/auth/auth-infrastructure.module';
 
 
 @Module({
@@ -40,7 +42,8 @@ import { AuthModule } from './modules/auth/auth.module';
     UserModule,
     ProjectModule,
     AuthModule,
-    
+    AuthInfrastructureModule,
+
   ],
   controllers: [AppController],
   providers: [
@@ -53,7 +56,8 @@ import { AuthModule } from './modules/auth/auth.module';
     // ── Global Interceptors ─────────────────────────────────────────────────
     // Order: logging runs first (wraps the full handler), response wrapping runs inside it.
     // { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor, },
+    { provide: APP_GUARD, useClass: JwtAuthGuard, },
   ],
 })
 // export class AppModule implements NestModule {
