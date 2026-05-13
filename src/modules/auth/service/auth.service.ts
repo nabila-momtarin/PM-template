@@ -2,10 +2,14 @@ import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@n
 import { LoginDto } from '../dto/login.dto';
 import { UserRepository } from 'src/modules/user/user.repository';
 import * as argon2 from 'argon2';
+import { TokenService } from 'src/infrastructure/auth/services/token.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly tokenService: TokenService,
+  ) {}
 
   private logger = new Logger(AuthService.name);
 
@@ -18,11 +22,11 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       filters: { email },
       useLean: true,
-     select: '+password name email role',
+      select: '+password name email role',
       populate: {
         path: 'role',
         select: 'roleName permissions',
-      }
+      },
     });
 
     if (!user) {
@@ -30,12 +34,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const isPasswordMatched = await argon2.verify(user.password , password);
+    const isPasswordMatched = await argon2.verify(user.password, password);
 
     if (!isPasswordMatched) {
       this.logger.warn(`Login failed: password does not match for email ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
+
+    const role = user.role as any;
+
+    const accessToken = await this.tokenService.generateAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      roleId: role._id.toString(),
+    });
+
+    this.logger.debug(`Access Token : ${accessToken}`);
 
     const { password: _password, ...safeUser } = user;
 
@@ -45,8 +59,8 @@ export class AuthService {
       success: true,
       message: 'Login successful',
       data: {
-        token: 'dummy token',
-        user: safeUser, 
+        token: accessToken,
+        user: safeUser,
       },
     };
   }
