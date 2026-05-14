@@ -8,6 +8,7 @@ import * as argon2 from 'argon2';
 import { UsersQueryDto } from './dto/admin-getAll-users.dto';
 import { UpdateUserDto } from './dto/admin-update-user.dto';
 import { ResetPasswordDto } from './dto/admin-reset-password.dto';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 
 @Injectable()
 export class UserService {
@@ -18,8 +19,9 @@ export class UserService {
 
     private logger = new Logger(UserService.name);
 
-    async createUser(dto: CreateUserDto /* , authUserId: string */) {
+    async createUser(dto: CreateUserDto , currentUser: AuthenticatedUser) {
         console.log('SERVICE : user : createUser\n');
+        this.logger.log('SERVICE: CURRENT USER:', currentUser);
 
         //email existence check
         const existingUser = await this.userRepository.findOne({
@@ -48,7 +50,7 @@ export class UserService {
             ...dto,
             password: hashedPassword,
             role: new Types.ObjectId(dto.role),
-            // createdBy: new Types.ObjectId(authUserId),
+            createdBy: new Types.ObjectId(currentUser.userId),
         };
 
         //creatae user

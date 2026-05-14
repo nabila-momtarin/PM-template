@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { RoleController } from "./http/role.controller";
+import { RoleController } from "./controller/role.controller";
 import { RoleService } from "./role.service";
 import { RoleRepository } from "./role.repository";
 import { Role, RoleSchema } from "./entities/role.schema";

@@ -4,20 +4,23 @@ import { CreateUserDto } from '../../dto/admin-create-user.dto';
 import { UsersQueryDto } from '../../dto/admin-getAll-users.dto';
 import { UpdateUserDto } from '../../dto/admin-update-user.dto';
 import { ResetPasswordDto } from '../../dto/admin-reset-password.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 
 @Controller('/users')
 export class AdminController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
   private logger = new Logger(AdminController.name);
 
   @Post()
-  async createUser(@Body() dto: CreateUserDto) {
+  async createUser(@Body() dto: CreateUserDto, @CurrentUser() user: AuthenticatedUser) {
     this.logger.debug('CONTROLLER : admin : createUser\n');
 
-    return this.userService.createUser(dto);
+    return this.userService.createUser(dto, user);
   }
 
   @Get()
+
   async allUsers(@Query() query: UsersQueryDto) {
     console.log('CONTROLLER : admin : allUsers\n');
 
