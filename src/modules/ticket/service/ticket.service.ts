@@ -135,4 +135,30 @@ export class TicketService {
   };
 }
 
+
+async deleteTicket(ticketId: string, currentUser: AuthenticatedUser) {
+  this.logger.log('SERVICE: ticket : deleteTicket');
+
+  const deletedTicket = await this.ticketRepository.softDeleteById(
+    ticketId,
+    {
+      useLean: true,
+    },
+    {
+      deletedAt: new Date(),
+      deletedBy: new Types.ObjectId(currentUser.userId),
+    },
+  );
+
+  if (!deletedTicket) {
+    throw new NotFoundException('Ticket not found');
+  }
+
+  return {
+    success: true,
+    message: 'Ticket deleted successfully',
+    data: deletedTicket,
+  };
+}
+
 }

@@ -1,4 +1,4 @@
-import { Get, Logger, Param } from '@nestjs/common';
+import { Delete, Get, Logger, Param } from '@nestjs/common';
 import { Body, Controller, Post, Query } from '@nestjs/common';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
@@ -35,4 +35,16 @@ getTicketById(@Param('ticketId') ticketId: string) {
 
   return this.ticketService.getTicketById(ticketId);
 }
+
+@Delete(':ticketId')
+deleteTicket(
+  @Param('ticketId') ticketId: string,
+  @CurrentUser() currentUser: AuthenticatedUser,
+) {
+  this.logger.debug('CONTROLLER : admin : deleteTicket\n');
+
+  return this.ticketService.deleteTicket(ticketId, currentUser);
+}
+
+
 }
