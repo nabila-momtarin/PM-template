@@ -16,6 +16,7 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './infrastructure/auth/guards/jwt-auth.guard';
 import { AuthInfrastructureModule } from './infrastructure/auth/auth-infrastructure.module';
+import { TicketModule } from './modules/ticket/ticket.module';
 
 
 @Module({
@@ -43,6 +44,7 @@ import { AuthInfrastructureModule } from './infrastructure/auth/auth-infrastruct
     ProjectModule,
     AuthModule,
     AuthInfrastructureModule,
+     TicketModule,
 
   ],
   controllers: [AppController],

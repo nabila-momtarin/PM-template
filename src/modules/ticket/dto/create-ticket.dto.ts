@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   IsArray,
   IsDate,
   IsEnum,
@@ -9,30 +8,21 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  MaxLength,
   MinLength,
 } from 'class-validator';
-import {
-  TicketPriority,
-  TicketType,
-} from 'src/common/enums/ticket.enum';
+import { TicketPriority, TicketType } from 'src/common/enums/ticket.enum';
 
 export class CreateTicketDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
-  @MaxLength(150)
+//   @MaxLength(150)
   title: string;
 
   @IsString()
   @IsOptional()
   description?: string;
-
-  @IsArray()
-  @IsOptional()
-  @IsUrl({}, { each: true })
-  attachments?: string[];
-
+  
   @IsEnum(TicketType)
   @IsNotEmpty()
   ticketType: TicketType;
@@ -45,6 +35,11 @@ export class CreateTicketDto {
   @IsDate()
   @IsNotEmpty()
   dueDate: Date;
+
+  @IsArray()
+  @IsOptional()
+  @IsUrl({}, { each: true })
+  attachments?: string[];
 
   @IsArray()
   @IsOptional()
