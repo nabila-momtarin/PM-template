@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { TicketRepository } from '../ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
@@ -100,5 +100,39 @@ export class TicketService {
             pagination: tickets.pagination,
         };
     }
+
+
+    async getTicketById(ticketId: string) {
+  this.logger.log('SERVICE: ticket : getTicketById');
+
+  const ticket = await this.ticketRepository.findById({
+    id: ticketId,
+    useLean: true,
+    populate: [
+      {
+        path: 'projects',
+        select: 'title type repositoryURL',
+      },
+      {
+        path: 'createdBy',
+        select: 'name email photo',
+      },
+      {
+        path: 'updatedBy',
+        select: 'name email photo',
+      },
+    ],
+  });
+
+  if (!ticket) {
+    throw new NotFoundException('Ticket not found');
+  }
+
+  return {
+    success: true,
+    message: 'Ticket fetched successfully',
+    data: ticket,
+  };
+}
 
 }

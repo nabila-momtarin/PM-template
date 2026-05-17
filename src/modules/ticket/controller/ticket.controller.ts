@@ -1,4 +1,4 @@
-import { Get, Logger } from '@nestjs/common';
+import { Get, Logger, Param } from '@nestjs/common';
 import { Body, Controller, Post, Query } from '@nestjs/common';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
@@ -28,4 +28,11 @@ export class AdminTicketController {
 
         return this.ticketService.getAllTickets(query);
     }
+
+    @Get(':ticketId')
+getTicketById(@Param('ticketId') ticketId: string) {
+  this.logger.debug('CONTROLLER : admin : getTicketById\n');
+
+  return this.ticketService.getTicketById(ticketId);
+}
 }
