@@ -427,4 +427,48 @@ export class TicketService {
       },
     };
   }
+
+     async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketReadyForRelease = await this.ticketRepository.updateByID(
+      ticketId,
+      {
+        status: 'Ready for Release',
+        updatedBy: currentUser.userId.toString(),
+      },
+      {
+        useLean: true,
+        new: true,
+      },
+    );
+
+    if (!updatedTicketReadyForRelease) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketReadyForRelease);
+    return {
+      success: true,
+      message: 'Ticket status updated successfully',
+      data: {
+        _id: updatedTicketReadyForRelease._id,
+        ticketNumber: updatedTicketReadyForRelease.ticketNumber,
+        status: updatedTicketReadyForRelease.status,
+        updatedAt: updatedTicketReadyForRelease.updatedAt,
+        updatedBy: updatedTicketReadyForRelease.updatedBy,
+      },
+    };
+  }
 }
