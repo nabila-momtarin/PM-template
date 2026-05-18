@@ -100,4 +100,12 @@ export class TicketController {
 
     return this.ticketService.updateTicketToReadyForRelease(id, currentUser);
   }
+
+    @Patch(':id/change-status/released')
+  markInReleased(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketToReleased(id, currentUser);
+  }
 }

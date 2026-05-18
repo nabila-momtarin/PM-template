@@ -471,4 +471,51 @@ export class TicketService {
       },
     };
   }
+
+      async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketReleased = await this.ticketRepository.updateByID(
+      ticketId,
+      {
+        status: 'Released',
+        updatedBy: currentUser.userId.toString(),
+      },
+      {
+        useLean: true,
+        new: true,
+      },
+    );
+
+    if (!updatedTicketReleased) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketReleased);
+    return {
+      success: true,
+      message: 'Ticket status updated successfully',
+      data: {
+        _id: updatedTicketReleased._id,
+        ticketNumber: updatedTicketReleased.ticketNumber,
+        status: updatedTicketReleased.status,
+        updatedAt: updatedTicketReleased.updatedAt,
+        updatedBy: updatedTicketReleased.updatedBy,
+      },
+    };
+  }
+
+
+  
 }
