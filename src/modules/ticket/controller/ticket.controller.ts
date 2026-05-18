@@ -8,43 +8,40 @@ import { TicketQueryDto } from '../dto/ticket-query.dto';
 
 
 @Controller('tickets')
-export class AdminTicketController {
-    constructor(private readonly ticketService: TicketService) { }
+export class TicketController {
+  constructor(private readonly ticketService: TicketService) { }
 
-    private readonly logger = new Logger(AdminTicketController.name);
+  private readonly logger = new Logger(TicketController.name);
 
-    @Post()
-    createTicket(@Body() dto: CreateTicketDto, @CurrentUser() currentUser: AuthenticatedUser) {
+  @Post()
+  createTicket(@Body() dto: CreateTicketDto, @CurrentUser() currentUser: AuthenticatedUser) {
 
-        this.logger.debug('CONTROLLER : admin : createTicket\n');
+    this.logger.debug('CONTROLLER : admin : createTicket\n');
 
-        return this.ticketService.createTicket(dto, currentUser);
+    return this.ticketService.createTicket(dto, currentUser);
 
-    }
+  }
 
-    @Get()
-    getAllTickets(@Query() query: TicketQueryDto) {
-        this.logger.debug('CONTROLLER : admin : getAllTickets\n');
+  @Get()
+  getAllTickets(@Query() query: TicketQueryDto) {
+    this.logger.debug('CONTROLLER : admin : getAllTickets\n');
 
-        return this.ticketService.getAllTickets(query);
-    }
+    return this.ticketService.getAllTickets(query);
+  }
 
-    @Get(':ticketId')
-getTicketById(@Param('ticketId') ticketId: string) {
-  this.logger.debug('CONTROLLER : admin : getTicketById\n');
+  @Get(':id')
+  getTicketById(@Param('id') id: string) {
+    this.logger.debug('CONTROLLER : admin : getTicketById\n');
 
-  return this.ticketService.getTicketById(ticketId);
-}
+    return this.ticketService.getTicketById(id);
+  }
 
-@Delete(':ticketId')
-deleteTicket(
-  @Param('ticketId') ticketId: string,
-  @CurrentUser() currentUser: AuthenticatedUser,
-) {
-  this.logger.debug('CONTROLLER : admin : deleteTicket\n');
+  @Delete(':id')
+  deleteTicket( @Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('CONTROLLER : admin : deleteTicket\n');
 
-  return this.ticketService.deleteTicket(ticketId, currentUser);
-}
+    return this.ticketService.deleteTicket(id, currentUser);
+  }
 
 
 }

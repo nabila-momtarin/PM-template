@@ -44,7 +44,7 @@ import { TicketModule } from './modules/ticket/ticket.module';
     ProjectModule,
     AuthModule,
     AuthInfrastructureModule,
-     TicketModule,
+    TicketModule,
 
   ],
   controllers: [AppController],

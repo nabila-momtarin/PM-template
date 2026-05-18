@@ -1,21 +1,18 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {  Ticket, TicketSchema } from './entities/ticket.schema';
-import { AdminTicketController } from './controller/ticket.controller';
+import { TicketController } from './controller/ticket.controller';
 import { TicketService } from './service/ticket.service';
 import { TicketRepository } from './ticket.repository';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
-      {
-        name: Ticket.name,
-        schema: TicketSchema,
-      },
+      { name: Ticket.name, schema: TicketSchema },
     ]),
   ],
-  controllers: [AdminTicketController],
-  providers: [TicketService, TicketRepository],
+  controllers: [ TicketController ],
+  providers: [ TicketService, TicketRepository ],
   exports: [],
 })
-export class TicketModule {}
+export class TicketModule {} 
