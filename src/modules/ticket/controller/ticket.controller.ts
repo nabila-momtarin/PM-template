@@ -6,6 +6,7 @@ import { TicketService } from '../service/ticket.service';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
+import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 
 
 @Controller('tickets')
@@ -49,6 +50,14 @@ export class TicketController {
     this.logger.debug('CONTROLLER : admin : upadteTicket\n');
 
     return this.ticketService.updateTicket(id, dto, currentUser);
+  }
+
+  @Patch(':id/due-date')
+  updateTicketDueDate( @Param('id') id: string, @Body() dto: UpdateTickeDueDatetDto, @CurrentUser() currentUser: AuthenticatedUser) {
+
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketDueDate( id, dto, currentUser );
   }
 
 }

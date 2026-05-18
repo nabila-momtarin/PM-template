@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { TicketRepository } from '../ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
@@ -6,6 +6,7 @@ import { TicketDocument } from '../entities/ticket.schema';
 import { Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
+import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 
 
 @Injectable()
@@ -196,6 +197,54 @@ export class TicketService {
     return {
       success: true,
       message: 'Ticket updated successfully',
+      data: updatedTicket
+    }
+  }
+
+
+  async updateTicketDueDate(ticketId: string, dto: UpdateTickeDueDatetDto, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    
+    // check invalid date format
+    const newDueDate = new Date(dto.dueDate);
+    if (isNaN(newDueDate.getTime())) {
+      this.logger.error('Invalid date');
+      throw new BadRequestException("Invalid date");
+    }
+
+    //check the date is not in the past
+    if (newDueDate < new Date()) {
+      this.logger.error('Due date cannot be in the past');
+      throw new Error('Due date cannot be in the past');
+    }
+
+    this.logger.log(newDueDate);
+
+    const updatedTicket = await this.ticketRepository.updateByID(ticketId,
+      {
+        dueDate: newDueDate,
+        updatedBy: currentUser.userId.toString()
+      },
+      {
+        useLean: true,
+        new: true,
+      });
+
+    return {
+      success: true,
+      message: "Ticket due date updated successfully",
       data: updatedTicket
     }
   }
