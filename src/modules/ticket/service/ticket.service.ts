@@ -5,6 +5,8 @@ import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketDocument } from '../entities/ticket.schema';
 import { Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
+import { UpdateTicketDto } from '../dto/update-ticket.dto';
+
 
 @Injectable()
 export class TicketService {
@@ -124,7 +126,7 @@ export class TicketService {
           select: 'name',
         },
       ],
-       select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate'
+      select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate'
     });
 
     if (!ticket) {
@@ -163,4 +165,38 @@ export class TicketService {
     };
   }
 
+  async updateTicket(ticketId: string, dto: UpdateTicketDto, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+    // this.logger.log(dto);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatableFields: Partial<UpdateTicketDto> = {
+      ...dto,
+      // updatedBy: new Types.ObjectId(currentUser.userId)
+      updatedBy: currentUser.userId.toString(),
+    }
+
+    this.logger.log(updatableFields);
+
+    const updatedTicket = await this.ticketRepository.updateByID(ticketId, updatableFields, {
+      useLean: true,
+      new: true,
+    });
+
+    return {
+      success: true,
+      message: 'Ticket updated successfully',
+      data: updatedTicket
+    }
+  }
 }
