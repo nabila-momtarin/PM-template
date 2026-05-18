@@ -9,5 +9,5 @@ export class UpdateTickeDueDatetDto {
 
     @IsOptional()
     @IsMongoId()
-    updatedBy: string
+    updatedBy?: string
 }

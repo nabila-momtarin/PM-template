@@ -2,11 +2,12 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { TicketRepository } from '../ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
-import { TicketDocument } from '../entities/ticket.schema';
-import { Types } from 'mongoose';
+import { Ticket, TicketDocument } from '../entities/ticket.schema';
+import { HydratedDocument, Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
+import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 
 @Injectable()
@@ -216,7 +217,7 @@ export class TicketService {
       throw new NotFoundException('Ticket not found');
     }
 
-    
+
     // check invalid date format
     const newDueDate = new Date(dto.dueDate);
     if (isNaN(newDueDate.getTime())) {
@@ -247,5 +248,48 @@ export class TicketService {
       message: "Ticket due date updated successfully",
       data: updatedTicket
     }
+  }
+
+
+  async updateTicketQaStatus(ticketId: string, dto: UpdateTicketQaStatusDto, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketQaStatus = await this.ticketRepository.updateByID(ticketId,
+      {
+        qaStatus: dto.qaStatus,
+        updatedBy: currentUser.userId.toString()
+      },
+      {
+        // useLean: true,
+        new: true,
+      });
+
+    if (!updatedTicketQaStatus) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketQaStatus);
+    return {
+      success: true,
+      message: "Ticket QA status updated successfully",
+      data: {
+        _id: updatedTicketQaStatus._id,
+        ticketNumber: updatedTicketQaStatus.ticketNumber,
+        qaStatus: updatedTicketQaStatus.qaStatus,
+        updatedAt: updatedTicketQaStatus.updatedAt,
+        updatedBy: updatedTicketQaStatus.updatedBy
+      }
+    };
   }
 }

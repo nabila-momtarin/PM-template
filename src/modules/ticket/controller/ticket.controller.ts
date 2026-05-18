@@ -7,6 +7,7 @@ import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
+import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 
 @Controller('tickets')
@@ -60,4 +61,11 @@ export class TicketController {
     return this.ticketService.updateTicketDueDate( id, dto, currentUser );
   }
 
+  @Patch(':id/change-qa-status')
+  updateTicketQaStatus( @Param('id') id: string, @Body() dto: UpdateTicketQaStatusDto, @CurrentUser() currentUser: AuthenticatedUser) {
+
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketQaStatus( id, dto, currentUser );
+  }
 }
