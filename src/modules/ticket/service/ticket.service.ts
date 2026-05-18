@@ -9,10 +9,9 @@ import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
-
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) { }
+  constructor(private readonly ticketRepository: TicketRepository) {}
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -23,9 +22,7 @@ export class TicketService {
   }
 
   async createTicket(dto: CreateTicketDto, currentUser: AuthenticatedUser) {
-
     this.logger.log('SERVICE: ticket : createTicket');
-
 
     const ticketNumber = await this.generateTicketNumber();
     this.logger.log(`Generated ticket number: ${ticketNumber}`);
@@ -51,7 +48,6 @@ export class TicketService {
       data: newTicket,
     };
   }
-
 
   private buildTicketFilter(query: TicketQueryDto): Record<string, any> {
     const filter: Record<string, any> = {};
@@ -111,7 +107,6 @@ export class TicketService {
     };
   }
 
-
   async getTicketById(ticketId: string) {
     this.logger.log('SERVICE: ticket : getTicketById');
 
@@ -128,7 +123,7 @@ export class TicketService {
           select: 'name',
         },
       ],
-      select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate'
+      select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate',
     });
 
     if (!ticket) {
@@ -141,7 +136,6 @@ export class TicketService {
       data: ticket,
     };
   }
-
 
   async deleteTicket(ticketId: string, currentUser: AuthenticatedUser) {
     this.logger.log('SERVICE: ticket : deleteTicket');
@@ -163,7 +157,7 @@ export class TicketService {
 
     return {
       success: true,
-      message: 'Ticket deleted successfully'
+      message: 'Ticket deleted successfully',
     };
   }
 
@@ -186,7 +180,7 @@ export class TicketService {
       ...dto,
       // updatedBy: new Types.ObjectId(currentUser.userId)
       updatedBy: currentUser.userId.toString(),
-    }
+    };
 
     this.logger.log(updatableFields);
 
@@ -198,12 +192,15 @@ export class TicketService {
     return {
       success: true,
       message: 'Ticket updated successfully',
-      data: updatedTicket
-    }
+      data: updatedTicket,
+    };
   }
 
-
-  async updateTicketDueDate(ticketId: string, dto: UpdateTickeDueDatetDto, currentUser: AuthenticatedUser) {
+  async updateTicketDueDate(
+    ticketId: string,
+    dto: UpdateTickeDueDatetDto,
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('BE HAPPY');
     this.logger.log(`ticketId: ${ticketId}`);
 
@@ -217,12 +214,11 @@ export class TicketService {
       throw new NotFoundException('Ticket not found');
     }
 
-
     // check invalid date format
     const newDueDate = new Date(dto.dueDate);
     if (isNaN(newDueDate.getTime())) {
       this.logger.error('Invalid date');
-      throw new BadRequestException("Invalid date");
+      throw new BadRequestException('Invalid date');
     }
 
     //check the date is not in the past
@@ -233,25 +229,30 @@ export class TicketService {
 
     this.logger.log(newDueDate);
 
-    const updatedTicket = await this.ticketRepository.updateByID(ticketId,
+    const updatedTicket = await this.ticketRepository.updateByID(
+      ticketId,
       {
         dueDate: newDueDate,
-        updatedBy: currentUser.userId.toString()
+        updatedBy: currentUser.userId.toString(),
       },
       {
         useLean: true,
         new: true,
-      });
+      },
+    );
 
     return {
       success: true,
-      message: "Ticket due date updated successfully",
-      data: updatedTicket
-    }
+      message: 'Ticket due date updated successfully',
+      data: updatedTicket,
+    };
   }
 
-
-  async updateTicketQaStatus(ticketId: string, dto: UpdateTicketQaStatusDto, currentUser: AuthenticatedUser) {
+  async updateTicketQaStatus(
+    ticketId: string,
+    dto: UpdateTicketQaStatusDto,
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('BE HAPPY');
     this.logger.log(`ticketId: ${ticketId}`);
 
@@ -265,15 +266,17 @@ export class TicketService {
       throw new NotFoundException('Ticket not found');
     }
 
-    const updatedTicketQaStatus = await this.ticketRepository.updateByID(ticketId,
+    const updatedTicketQaStatus = await this.ticketRepository.updateByID(
+      ticketId,
       {
         qaStatus: dto.qaStatus,
-        updatedBy: currentUser.userId.toString()
+        updatedBy: currentUser.userId.toString(),
       },
       {
         // useLean: true,
         new: true,
-      });
+      },
+    );
 
     if (!updatedTicketQaStatus) {
       this.logger.error('Ticket not found or deleted during update');
@@ -282,14 +285,58 @@ export class TicketService {
     this.logger.log(updatedTicketQaStatus);
     return {
       success: true,
-      message: "Ticket QA status updated successfully",
+      message: 'Ticket QA status updated successfully',
       data: {
         _id: updatedTicketQaStatus._id,
         ticketNumber: updatedTicketQaStatus.ticketNumber,
         qaStatus: updatedTicketQaStatus.qaStatus,
         updatedAt: updatedTicketQaStatus.updatedAt,
-        updatedBy: updatedTicketQaStatus.updatedBy
-      }
+        updatedBy: updatedTicketQaStatus.updatedBy,
+      },
+    };
+  }
+
+  async updateTicketToInProgress(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketInProgress = await this.ticketRepository.updateByID(
+      ticketId,
+      {
+        status: 'In Progress',
+        updatedBy: currentUser.userId.toString(),
+      },
+      {
+        useLean: true,
+        new: true,
+      },
+    );
+
+    if (!updatedTicketInProgress) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketInProgress);
+    return {
+      success: true,
+      message: 'Ticket status updated successfully',
+      data: {
+        _id: updatedTicketInProgress._id,
+        ticketNumber: updatedTicketInProgress.ticketNumber,
+        status: updatedTicketInProgress.status,
+        updatedAt: updatedTicketInProgress.updatedAt,
+        updatedBy: updatedTicketInProgress.updatedBy,
+      },
     };
   }
 }
