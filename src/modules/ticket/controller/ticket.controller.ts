@@ -85,4 +85,11 @@ export class TicketController {
     return this.ticketService.updateTicketToDeveloped(id, currentUser);
   }
 
+    @Patch(':id/change-status/qa-in-progress')
+  markInQAInProgress(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketToQaInProgress(id, currentUser);
+  }
 }

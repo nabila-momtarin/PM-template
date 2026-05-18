@@ -383,4 +383,48 @@ export class TicketService {
       },
     };
   }
+
+   async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketQaInProgress = await this.ticketRepository.updateByID(
+      ticketId,
+      {
+        status: 'QA In Progress',
+        updatedBy: currentUser.userId.toString(),
+      },
+      {
+        useLean: true,
+        new: true,
+      },
+    );
+
+    if (!updatedTicketQaInProgress) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketQaInProgress);
+    return {
+      success: true,
+      message: 'Ticket status updated successfully',
+      data: {
+        _id: updatedTicketQaInProgress._id,
+        ticketNumber: updatedTicketQaInProgress.ticketNumber,
+        status: updatedTicketQaInProgress.status,
+        updatedAt: updatedTicketQaInProgress.updatedAt,
+        updatedBy: updatedTicketQaInProgress.updatedBy,
+      },
+    };
+  }
 }
