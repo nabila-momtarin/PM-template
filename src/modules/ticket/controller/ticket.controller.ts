@@ -54,26 +54,35 @@ export class TicketController {
   }
 
   @Patch(':id/due-date')
-  updateTicketDueDate( @Param('id') id: string, @Body() dto: UpdateTickeDueDatetDto, @CurrentUser() currentUser: AuthenticatedUser) {
+  updateTicketDueDate(@Param('id') id: string, @Body() dto: UpdateTickeDueDatetDto, @CurrentUser() currentUser: AuthenticatedUser) {
 
     this.logger.debug('KEEP GOING\n');
 
-    return this.ticketService.updateTicketDueDate( id, dto, currentUser );
+    return this.ticketService.updateTicketDueDate(id, dto, currentUser);
   }
 
   @Patch(':id/change-qa-status')
-  updateTicketQaStatus( @Param('id') id: string, @Body() dto: UpdateTicketQaStatusDto, @CurrentUser() currentUser: AuthenticatedUser) {
+  updateTicketQaStatus(@Param('id') id: string, @Body() dto: UpdateTicketQaStatusDto, @CurrentUser() currentUser: AuthenticatedUser) {
 
     this.logger.debug('KEEP GOING\n');
 
-    return this.ticketService.updateTicketQaStatus( id, dto, currentUser );
+    return this.ticketService.updateTicketQaStatus(id, dto, currentUser);
   }
 
   @Patch(':id/change-status/in-progress')
-  markInProgress ( @Param('id') id: string, @CurrentUser() currentUser:  AuthenticatedUser) {
+  markInProgress(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
 
     this.logger.debug('KEEP GOING\n');
 
-    return this.ticketService.updateTicketToInProgress( id, currentUser );
+    return this.ticketService.updateTicketToInProgress(id, currentUser);
   }
+
+  @Patch(':id/change-status/developed')
+  markInDevloped(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketToDeveloped(id, currentUser);
+  }
+
 }
