@@ -11,7 +11,7 @@ import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) {}
+  constructor(private readonly ticketRepository: TicketRepository) { }
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -384,7 +384,7 @@ export class TicketService {
     };
   }
 
-   async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
+  async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
     this.logger.log('BE HAPPY');
     this.logger.log(`ticketId: ${ticketId}`);
 
@@ -428,7 +428,7 @@ export class TicketService {
     };
   }
 
-     async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
+  async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
     this.logger.log('BE HAPPY');
     this.logger.log(`ticketId: ${ticketId}`);
 
@@ -472,7 +472,7 @@ export class TicketService {
     };
   }
 
-      async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
+  async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
     this.logger.log('BE HAPPY');
     this.logger.log(`ticketId: ${ticketId}`);
 
@@ -517,5 +517,48 @@ export class TicketService {
   }
 
 
-  
+  async updateTicketToClosed(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    this.logger.log(`ticketId: ${ticketId}`);
+
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const updatedTicketClosed = await this.ticketRepository.updateByID(
+      ticketId,
+      {
+        status: 'Closed',
+        updatedBy: currentUser.userId.toString(),
+      },
+      {
+        useLean: true,
+        new: true,
+      },
+    );
+
+    if (!updatedTicketClosed) {
+      this.logger.error('Ticket not found or deleted during update');
+      throw new NotFoundException('Ticket not found or deleted during update');
+    }
+    this.logger.log(updatedTicketClosed);
+    return {
+      success: true,
+      message: 'Ticket status updated successfully',
+      data: {
+        _id: updatedTicketClosed._id,
+        ticketNumber: updatedTicketClosed.ticketNumber,
+        status: updatedTicketClosed.status,
+        updatedAt: updatedTicketClosed.updatedAt,
+        updatedBy: updatedTicketClosed.updatedBy,
+      },
+    };
+  }
+
 }
