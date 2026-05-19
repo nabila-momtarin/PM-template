@@ -1,0 +1,18 @@
+import { Body, Controller, Logger, Post } from "@nestjs/common";
+import { TaskService } from "../service/task.service";
+import { CreateTaskDto } from "../dto/create-task.dto";
+import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { AuthenticatedUser } from "src/infrastructure/auth/types/auth.types";
+
+@Controller('tasks')
+export class TaskController {
+    constructor( private readonly taskService: TaskService) {}
+
+    private readonly logger = new Logger(TaskController.name)
+
+    @Post()
+    async createTask( @Body() dto: CreateTaskDto, @CurrentUser() currentUser: AuthenticatedUser) {
+        this.logger.log('WHO FORBID U TO BE HAPPY? JIO KHUSH RAHO... HAHA')
+        return this.taskService.createTask( dto, currentUser );
+    }
+}

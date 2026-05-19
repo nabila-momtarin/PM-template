@@ -2,8 +2,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { TicketRepository } from '../ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
-import { Ticket, TicketDocument } from '../entities/ticket.schema';
-import { HydratedDocument, Types } from 'mongoose';
+import { TicketDocument } from '../entities/ticket.schema';
+import { Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
