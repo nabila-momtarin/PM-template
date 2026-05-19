@@ -3,7 +3,7 @@ import { CreateTaskDto } from "../dto/create-task.dto";
 import { AuthenticatedUser } from "src/infrastructure/auth/types/auth.types";
 import { TaskRepository } from "../task.repository";
 import { Types } from "mongoose";
-import { TaskDocument } from "../entities/task.schema";
+import { Task,  } from "../entities/task.schema";
 
 @Injectable()
 export class TaskService {
@@ -22,7 +22,7 @@ export class TaskService {
         const taskNumber = await this.generateTaskNumber();
         this.logger.log(`Generated task number: ${taskNumber}`);
 
-        const taskPayload: Partial<TaskDocument> = {
+        const taskPayload: Partial<Task> = {
             ...dto,
             taskNumber: taskNumber,
             projectId: new Types.ObjectId(dto.projectId),
