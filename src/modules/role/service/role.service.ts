@@ -1,15 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { RoleRepository } from './role.repository';
-import { RolesQueryDto } from './dto/getAll-roles.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { RoleRepository } from '../repositroy/role.repository';
+import { CreateRoleDto } from '../dto/create-role.dto';
+import { RolesQueryDto } from '../dto/getAll-roles.dto';
+import { UpdateRoleDto } from '../dto/update-role.dto';
 
 @Injectable()
 export class RoleService {
     constructor(private readonly roleRepository: RoleRepository) { }
 
+    private readonly logger = new Logger(RoleService.name);
+
     async createRole(createRoleDto: CreateRoleDto) {
-        console.log('SERVICE: Creating a new role\n');
+        // console.log('SERVICE: Creating a new role\n');
+        this.logger.debug('..');
 
         const newRole = await this.roleRepository.createOne(createRoleDto);
 
@@ -18,7 +21,8 @@ export class RoleService {
         //     throw new Error('Failed to create role');
         // }
 
-        console.log('newRole: SERVICE: ', newRole);
+        // console.log('newRole: SERVICE: ', newRole);
+        this.logger.debug(`Created Role: SERVICE: ${newRole}`);
 
         return {
             success: true,
@@ -28,7 +32,8 @@ export class RoleService {
     }
 
     async getAllRoles(query: RolesQueryDto) {
-        console.log('SERVICE: Fetching all roles\n');
+        // console.log('SERVICE: Fetching all roles\n');
+        this.logger.debug('..');
 
         const allRoles = await this.roleRepository.getAllData({
             filter: query.filter ?? '{}',
@@ -38,7 +43,8 @@ export class RoleService {
             useLean: true,
         });
 
-        console.log('allRoles: SERVICE: ', allRoles);
+        // console.log('allRoles: SERVICE: ', allRoles);
+        this.logger.debug(`All Roles: SERVICE: ${allRoles}`);
 
         return {
             success: true,
@@ -49,12 +55,15 @@ export class RoleService {
     }
 
     async getRoleById(roleId: string) {
-        console.log('SERVICE: Fetching role by ID\n');
+        // console.log('SERVICE: Fetching role by ID\n');
+        this.logger.debug('..');
 
         const role = await this.roleRepository.findById({ id: roleId });
 
         if (!role) {
-            console.log('Role not found: SERVICE: ', roleId);
+            // console.log('Role not found: SERVICE: ', roleId);
+            this.logger.debug(`Role not found: SERVICE: ${roleId}`);
+
             return {
                 success: false,
                 message: 'Role not found',
@@ -62,7 +71,8 @@ export class RoleService {
             };
         }
 
-        console.log('role: SERVICE: ', role);
+        // console.log('role: SERVICE: ', role);
+        this.logger.debug(`Role: SERVICE: ${role}`);
 
         return {
             success: true,
@@ -72,13 +82,16 @@ export class RoleService {
     }
 
     async deleteRole(roleId: string) {
-        console.log('SERVICE: Deleting role by ID\n');
+        // console.log('SERVICE: Deleting role by ID\n');
+        this.logger.debug('..');
 
 
         const role = await this.roleRepository.findById({ id: roleId });
 
         if (!role) {
-            console.log('Role not found: SERVICE: ', roleId);
+            // console.log('Role not found: SERVICE: ', roleId);
+            this.logger.debug(`Role not found: SERVICE: ${roleId}`);
+
             throw new NotFoundException('Role not found');
 
             //   return {
@@ -89,13 +102,15 @@ export class RoleService {
         }
 
         if (role.isSuperAdmin) {
-             console.log ('SERVICE  : Super Admin role cannot be deleted');
+            //  console.log ('SERVICE  : Super Admin role cannot be deleted');
+            this.logger.error(`Super Admin role cannot be deleted`);
             throw new BadRequestException('Super Admin role cannot be deleted');
         }
 
         const deletedRole = await this.roleRepository.deleteById(roleId);
 
-        console.log('deletedRole: SERVICE: ', deletedRole);
+        // console.log('deletedRole: SERVICE: ', deletedRole);
+        this.logger.debug(`Deleted Role: SERVICE: ${deletedRole}`);
 
         return {
             success: true,
@@ -108,22 +123,26 @@ export class RoleService {
     }
 
     async updateRole(roleId: string, updateRoleDto: UpdateRoleDto) {
-        console.log('SERVICE: Updating role by ID\n');
+        // console.log('SERVICE: Updating role by ID\n');
+        this.logger.debug('..');
         const role = await this.roleRepository.findById({ id: roleId });
 
         if (!role) {
-            console.log('Role not found: SERVICE: ', roleId);
+            // console.log('Role not found: SERVICE: ', roleId);
+            this.logger.error(`Role not found: SERVICE: ${roleId}`);
             throw new NotFoundException('Role not found');
         }
 
         if (role.isSuperAdmin) {
-            console.log ('SERVICE : Super Admin role cannot be updated');
+            // console.log ('SERVICE : Super Admin role cannot be updated');
+            this.logger.error(`Super Admin role cannot be updated`);
             throw new BadRequestException('Super Admin role cannot be updated');
         }
 
         const updatedRole = await this.roleRepository.updateByID(roleId, updateRoleDto);
 
-        console.log('updatedRole: SERVICE: ', updatedRole);
+        // console.log('updatedRole: SERVICE: ', updatedRole);
+        this.logger.debug(`Updated Role: SERVICE: ${updatedRole}`);
 
         return {
             success: true,

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
-import { TaskRepository } from '../task.repository';
+import { TaskRepository } from '../repositroy/task.repository';
 import { Types } from 'mongoose';
 import { Task } from '../entities/task.schema';
 import { UpdateTaskDto } from '../dto/update-task.dto';

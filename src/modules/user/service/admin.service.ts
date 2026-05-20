@@ -1,14 +1,14 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, Param } from '@nestjs/common';
-import { CreateUserDto } from './dto/admin-create-user.dto';
-import { UserRepository } from './user.repository';
-import { UserDocument } from './entities/user.schema';
 import { Types } from 'mongoose';
-import { RoleRepository } from '../role/role.repository';
 import * as argon2 from 'argon2';
-import { UsersQueryDto } from './dto/admin-getAll-users.dto';
-import { UpdateUserDto } from './dto/admin-update-user.dto';
-import { ResetPasswordDto } from './dto/admin-reset-password.dto';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
+import { RoleRepository } from 'src/modules/role/repositroy/role.repository';
+import { UserRepository } from '../repositroy/user.repository';
+import { CreateUserDto } from '../dto/admin-create-user.dto';
+import { UserDocument } from '../entities/user.schema';
+import { UsersQueryDto } from '../dto/admin-getAll-users.dto';
+import { UpdateUserDto } from '../dto/admin-update-user.dto';
+import { ResetPasswordDto } from '../dto/admin-reset-password.dto';
 
 @Injectable()
 export class UserService {
@@ -20,7 +20,7 @@ export class UserService {
     private logger = new Logger(UserService.name);
 
     async createUser(dto: CreateUserDto , currentUser: AuthenticatedUser) {
-        console.log('SERVICE : user : createUser\n');
+        // console.log('SERVICE : user : createUser\n');
         this.logger.log('SERVICE: CURRENT USER:', currentUser);
 
         //email existence check
@@ -76,7 +76,7 @@ export class UserService {
     }
 
     async getAllUsers(query: UsersQueryDto) {
-        console.log('SERVICE : user : allUsers\n');
+        this.logger.log('...');
 
         const allUsers = await this.userRepository.getAllData({
             filter: query.filter ?? '{}',
@@ -86,12 +86,12 @@ export class UserService {
             useLean: true,
         });
 
-        console.log('All users: SERVICE: ', allUsers);
+        this.logger.log('allUsers: SERVICE: ', allUsers);
         return allUsers;
     }
 
     async getAUser(id: string) {
-        console.log('SERVICE : user : getAUser\n');
+        this.logger.log('...');
 
         const user = await this.userRepository.findById({
             id,
@@ -104,11 +104,12 @@ export class UserService {
         });
 
         if (!user) {
-            console.error('User not found: ', id);
+            // console.error('User not found: ', id);
+            this.logger.error(`User not found: ${id}`);
             throw new NotFoundException('User not found');
         }
 
-        console.log('user: SERVICE: ', user);
+        this.logger.debug(`Fetched User: SERVICE: ${user}`);
         return {
             success: true,
             message: 'User fetched successfully',
@@ -117,16 +118,18 @@ export class UserService {
     }
 
     async deleteUser(id: string) {
-        console.log('SERVICE : user : deleteUser\n');
+        this.logger.log('...');
 
         const deletedUser = await this.userRepository.deleteById(id);
 
         if (!deletedUser) {
-            console.error('User not found: ', id);
+            // console.error('User not found: ', id);
+            this.logger.error(`User not found: ${id}`);
             throw new NotFoundException('User not found');
         }
 
-        console.log('deletedUser: SERVICE: ', deletedUser);
+        this.logger.debug(`Deleted User: SERVICE: ${deletedUser}`);
+
         return {
             success: true,
             message: 'User deleted successfully',
@@ -138,7 +141,7 @@ export class UserService {
     }
 
     async updateUser(id: string, dto: UpdateUserDto) {
-        console.log('SERVICE : user : updateUser\n');
+        this.logger.log('...');
 
         const userExist = await this.userRepository.findById({ id, useLean: true });
 

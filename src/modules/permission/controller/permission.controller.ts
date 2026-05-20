@@ -1,14 +1,17 @@
-import { Controller, Get } from "@nestjs/common";
-import { PermissionService } from "../permission.service";
+import { Controller, Get, Logger } from "@nestjs/common";
+import { PermissionService } from "../service/permission.service";
 
 
 @Controller('permissions')
 export class PermissionController {
     constructor( private readonly permissionService: PermissionService) {}
 
+    private readonly logger = new Logger( PermissionController.name);
+
     @Get()
     getAllPermissions() {
-        console.log('controller: Fetching all permissions');
+
+        this.logger.log('controller: Fetching all permissions');
 
         return this.permissionService.getAllPermission();
     }

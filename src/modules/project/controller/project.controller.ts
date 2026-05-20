@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query } from '@nestjs/common';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { ProjectService } from '../service/project.service';
 import { UpdateProjectDto } from '../dto/update-project.dto';
@@ -8,9 +8,15 @@ import { ProjectQueryDto } from '../dto/getAll-project.dto';
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
+  private readonly logger = new Logger(ProjectController.name);
+
+  private readonly logger = new Logger();
+
+  
   @Post()
   async create(@Body() createProjectDto: CreateProjectDto /* , userId: string */) {
-    console.log('Project CONTROLLER: create\n');
+    
+    this.logger.log('..');
 
     const project = await this.projectService.create(createProjectDto /* , userId */);
 
@@ -19,7 +25,8 @@ export class ProjectController {
 
   @Get()
   async findAll(@Query() query: ProjectQueryDto) {
-    console.log('Project CONTROLLER: findAll\n');
+    
+    this.logger.log('..');
 
     const result = await this.projectService.findAll(query);
 
@@ -28,7 +35,8 @@ export class ProjectController {
 
   @Get(':projectId')
   async getProjectById(@Param('projectId') projectId: string) {
-    console.log('Project CONTROLLER: getProjectById\n');
+
+    this.logger.log('..');
 
     const result = await this.projectService.getProjectById(projectId);
 
@@ -37,7 +45,8 @@ export class ProjectController {
 
   @Delete(':projectId')
   async deleteByIdProject(@Param('projectId') projectId: string) {
-    console.log('Project CONTROLLER: deleteByIdProject\n');
+    
+    this.logger.log('..');
 
     const result = await this.projectService.deleteByIdProject(projectId);
 
@@ -49,11 +58,12 @@ export class ProjectController {
     @Param('projectId') projectId: string,
     @Body() updateProjectDto: UpdateProjectDto,
   ) {
-    console.log('Project CONTROLLER: updateProject\n');
+
+    this.logger.log('..');
 
     const result = await this.projectService.updateProject(projectId, updateProjectDto);
 
-    console.log(`Updated Project: SERVICE: ${result}`);
+    this.logger.log(`Updated Project: SERVICE: ${result}`);
 
     return result;
   }

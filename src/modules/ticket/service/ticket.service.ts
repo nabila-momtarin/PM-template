@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { TicketRepository } from '../ticket.repository';
+import { TicketRepository } from '../repositroy/ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketDocument } from '../entities/ticket.schema';

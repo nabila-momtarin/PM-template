@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "src/common/repositories/base.repository";
 import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
-import { Ticket, TicketDocument } from "./entities/ticket.schema";
+import { Ticket, TicketDocument } from "../entities/ticket.schema";
 
 
 
