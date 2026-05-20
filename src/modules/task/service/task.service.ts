@@ -1,18 +1,19 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { CreateTaskDto } from "../dto/create-task.dto";
-import { AuthenticatedUser } from "src/infrastructure/auth/types/auth.types";
-import { TaskRepository } from "../task.repository";
-import { Types } from "mongoose";
-import { Task,  } from "../entities/task.schema";
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { CreateTaskDto } from '../dto/create-task.dto';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
+import { TaskRepository } from '../task.repository';
+import { Types } from 'mongoose';
+import { Task } from '../entities/task.schema';
+import { UpdateTaskDto } from '../dto/update-task.dto';
 
 @Injectable()
 export class TaskService {
-    constructor(private readonly taskrepository: TaskRepository) { }
+    constructor(private readonly taskRepository: TaskRepository) { }
 
-    private readonly logger = new Logger(TaskService.name)
+    private readonly logger = new Logger(TaskService.name);
 
     private async generateTaskNumber(): Promise<string> {
-        const totalTasks = await this.taskrepository.countDocuments();
+        const totalTasks = await this.taskRepository.countDocuments();
 
         return 'TASK-' + (totalTasks + 1);
     }
@@ -29,17 +30,65 @@ export class TaskService {
             ticketId: new Types.ObjectId(dto.ticketId),
             assignee: new Types.ObjectId(dto.assignee),
             dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-            createdBy: new Types.ObjectId(currentUser.userId)
+            createdBy: new Types.ObjectId(currentUser.userId),
         };
 
-        const newTask = await this.taskrepository.createOne(taskPayload);
+        const newTask = await this.taskRepository.createOne(taskPayload);
 
         this.logger.log(newTask);
 
         return {
             success: true,
-            message: "Task created successfully",
-            data: newTask
-        }
+            message: 'Task created successfully',
+            data: newTask,
+        };
     }
+
+    async getTask(id: string) {
+        this.logger.debug('..');
+
+        if (!Types.ObjectId.isValid(id)) {
+            this.logger.error('Invalid task id');
+            throw new BadRequestException('Invalid task id');
+        }
+
+        const task = await this.taskRepository.findById({
+            id,
+            useLean: true,
+            select: '-__v -attachments -isDeleted -updatedAt -deletedAt -deletedBy -createdBy',
+            populate: [
+                {
+                    path: 'assignee',
+                    select: 'name photo',
+                },
+                {
+                    path: 'projectId',
+                    select: 'title type',
+                },
+                {
+                    path: 'ticketId',
+                    select: 'ticketNumber priority',
+                },
+            ]
+        });
+
+        if (!task) {
+            this.logger.error('Task not found for : ', id);
+            throw new NotFoundException('Task not found');
+        }
+        this.logger.debug('Task : ', task);
+
+        const { projectId, ticketId, ...resTask } = task;
+
+        return {
+            success: true,
+            message: 'Task fetched successfully',
+            data: {
+                ...resTask,
+                project: projectId,
+                ticket: ticketId,
+            },
+        };
+    }
+
 }
