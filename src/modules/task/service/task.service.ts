@@ -5,6 +5,8 @@ import { TaskRepository } from '../task.repository';
 import { Types } from 'mongoose';
 import { Task } from '../entities/task.schema';
 import { UpdateTaskDto } from '../dto/update-task.dto';
+import { TaskDueDateUpdateDTO } from '../dto/task-due-date.dto';
+import { TaskQueryDto } from '../dto/task-query.dto';
 
 @Injectable()
 export class TaskService {
@@ -181,6 +183,134 @@ export class TaskService {
         }
 
     };
+
+    async TaskDueDateUpdate(
+        id: string,
+        dto: TaskDueDateUpdateDTO,
+        currentUser: AuthenticatedUser,
+    ) {
+        this.logger.log('...');
+        this.logger.log(`task id: ${id}`);
+
+        const existingTask = await this.taskRepository.findById({
+            id: id,
+            useLean: true,
+        });
+
+        if (!existingTask) {
+            this.logger.error('Task not found');
+            throw new NotFoundException('Task not found');
+        }
+
+        // check invalid date format
+        const newDueDate = new Date(dto.dueDate);
+        if (isNaN(newDueDate.getTime())) {
+            this.logger.error('Invalid date');
+            throw new BadRequestException('Invalid date');
+        }
+
+        //check the date is not in the past
+        if (newDueDate < new Date()) {
+            this.logger.error('Due date cannot be in the past');
+            throw new BadRequestException('Due date cannot be in the past');
+        }
+
+        this.logger.log(newDueDate);
+
+        const updatedTask = await this.taskRepository.updateByID(
+            id,
+            {
+                dueDate: newDueDate,
+                updatedBy: currentUser.userId.toString(),
+            },
+            {
+                useLean: true,
+                new: true,
+            },
+        );
+
+        return {
+            success: true,
+            message: 'Task due date updated successfully',
+            data: {
+                _id: existingTask._id,
+                taskNumber: existingTask.taskNumber,
+                dueDate: newDueDate,
+                updatedAt: new Date(),
+                updatedBy: currentUser.userId.toString(),
+            },
+        };
+    }
+
+    private buildTaskFilter(query: TaskQueryDto): Record<string, any> {
+        const filter: Record<string, any> = {};
+
+        if (query.status) {
+            filter.status__eq = query.status;
+        }
+
+        // if (query.assignee) {
+        //     filter.assignee__in = [query.assignee];
+        // }
+
+        // if (query.projectId) {
+        //     filter.projectId__in = [query.projectId];
+        // }
+
+        // if (query.ticketId) {
+        //     filter.ticketId__in = [query.ticketId];
+        // }
+
+
+        if (query.search) {
+            filter.title__like = query.search;
+        }
+
+        return filter;
+    }
+    async getAllTask(query: TaskQueryDto) {
+        this.logger.debug('..');
+
+        const filterObj = this.buildTaskFilter(query);
+
+        this.logger.log(`Filter: ${JSON.stringify(filterObj)}`);
+
+        // const sampleTasks = await this.taskRepository.find({
+        //     limit: 3,
+        //     useLean: true,
+        //     select: 'title assignee projectId ticketId status',
+        // });
+
+        // this.logger.log(`Sample tasks: ${JSON.stringify(sampleTasks)}`);
+
+        const tasks = await this.taskRepository.getAllData({
+            filter: JSON.stringify({ and: filterObj }),
+            sortStr: query.sort ?? '-createdAt',
+            page: String(query.page ?? 1),
+            length: String(query.limit ?? query.length ?? 10),
+            // filterableFields: [
+            //     'status',
+            //     'priority',
+            //     'assignee',
+            //     'title',
+            //     'taskNumber',
+            //     'dueDate',
+            //     'createdAt',
+            // ],
+            useLean: true,
+        });
+
+        this.logger.log('tasks: SERVICE: ', tasks);
+
+        return {
+            success: true,
+            message: 'Tasks fetched successfully',
+            data: tasks.data,
+            pagination: tasks.pagination,
+        };
+    }
+
+
 
 
 }
