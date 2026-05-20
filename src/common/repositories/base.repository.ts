@@ -547,6 +547,9 @@ export class BaseRepository<T extends Document> {
     } = params;
 
     const filters = filterParamsDecoder(filter);
+
+    console.log(JSON.stringify(filters, null, 2));
+
     const sort = sortParamsDecoder(sortStr);
     const paginationParams = queryToPagination({ page, length });
 

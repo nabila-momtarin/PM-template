@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { isValidObjectId, Types } from 'mongoose';
 
 export type PaginationData = {
   request: {
@@ -42,11 +43,28 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
 
     const decoded = JSON.parse(filters.replace(/'/g, '"'));
 
-    const STRING_OPS = ['like', 'ilike', 'contains', 'startsWith', 'endsWith', 'regex', 'search',
-      'exactContains', 'exactStartsWith', 'exactEndsWith', 'notContains'];
+    const STRING_OPS = [
+      'like',
+      'ilike',
+      'contains',
+      'startsWith',
+      'endsWith',
+      'regex',
+      'search',
+      'exactContains',
+      'exactStartsWith',
+      'exactEndsWith',
+      'notContains',
+    ];
 
     const parseValue = (value: any, operator: string): any => {
-      if (STRING_OPS.includes(operator)) return value;
+      if (STRING_OPS.includes(operator)) {
+        if (isValidObjectId(value)) {
+          return new Types.ObjectId(value);
+        }
+
+        return value;
+      }
 
       if (typeof value === 'string' && ['true', 'false'].includes(value.toLowerCase())) {
         return value.toLowerCase() === 'true';
@@ -54,6 +72,10 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
 
       if (typeof value === 'string' && !isNaN(Number(value)) && value.trim() !== '') {
         return Number(value);
+      }
+
+      if (isValidObjectId(value)) {
+        return new Types.ObjectId(value);
       }
 
       return value;
@@ -99,7 +121,9 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
           if (!Array.isArray(rawValue) || rawValue.length !== 2) {
             throw new BadRequestException(`'between' requires array [min, max]`);
           }
-          return { [field]: { $gte: parseValue(rawValue[0], 'gte'), $lte: parseValue(rawValue[1], 'lte') } };
+          return {
+            [field]: { $gte: parseValue(rawValue[0], 'gte'), $lte: parseValue(rawValue[1], 'lte') },
+          };
         }
 
         // ── String ─────────────────────────────────────────────────────────
@@ -168,22 +192,24 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
         // ── Date ───────────────────────────────────────────────────────────
         case 'day': {
           const d = new Date(rawValue);
-          const start = new Date(d); start.setHours(0, 0, 0, 0);
-          const end = new Date(d);   end.setHours(23, 59, 59, 999);
+          const start = new Date(d);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(d);
+          end.setHours(23, 59, 59, 999);
           return { [field]: { $gte: start, $lte: end } };
         }
 
         case 'month': {
           const d = new Date(rawValue);
           const start = new Date(d.getFullYear(), d.getMonth(), 1);
-          const end   = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+          const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
           return { [field]: { $gte: start, $lte: end } };
         }
 
         case 'year': {
           const d = new Date(rawValue);
           const start = new Date(d.getFullYear(), 0, 1);
-          const end   = new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999);
+          const end = new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999);
           return { [field]: { $gte: start, $lte: end } };
         }
 
@@ -198,7 +224,8 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
             throw new BadRequestException(`'dateRange' requires array [startDate, endDate]`);
           }
           const start = new Date(rawValue[0]);
-          const end   = new Date(rawValue[1]); end.setHours(23, 59, 59, 999);
+          const end = new Date(rawValue[1]);
+          end.setHours(23, 59, 59, 999);
           return { [field]: { $gte: start, $lte: end } };
         }
 
@@ -237,18 +264,20 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
     };
 
     const andConditions = buildGroup(decoded.and || {});
-    const orConditions  = buildGroup(decoded.or  || []);
+    const orConditions = buildGroup(decoded.or || []);
     const notConditions = decoded.not ? buildGroup(decoded.not) : [];
 
     const query: Record<string, any> = {};
     if (andConditions.length > 0) query.$and = andConditions;
-    if (orConditions.length  > 0) query.$or  = orConditions;
-    if (notConditions.length > 0) query.$nor  = notConditions;
+    if (orConditions.length > 0) query.$or = orConditions;
+    if (notConditions.length > 0) query.$nor = notConditions;
 
     return query;
   } catch (e) {
     if (e instanceof BadRequestException) throw e;
-    throw new BadRequestException(`Invalid filter format: ${e instanceof Error ? e.message : String(e)}`);
+    throw new BadRequestException(
+      `Invalid filter format: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 }
 
@@ -257,7 +286,10 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
  * Searches through all and/or/not groups recursively.
  * Supports dot-notation and any operator suffix, e.g. businessId__eq, roles.businessId__like
  */
-export const extractFieldValue = (filter: string | null | undefined, fieldName: string): string | null => {
+export const extractFieldValue = (
+  filter: string | null | undefined,
+  fieldName: string,
+): string | null => {
   if (!filter) return null;
 
   const filterObj = JSON.parse(filter.replace(/'/g, '"'));
@@ -273,10 +305,7 @@ export const extractFieldValue = (filter: string | null | undefined, fieldName: 
 
     for (const [key, val] of Object.entries(obj)) {
       const keyBase = key.split('__')[0];
-      if (
-        keyBase === fieldName ||
-        keyBase.endsWith(`.${fieldName}`)
-      ) {
+      if (keyBase === fieldName || keyBase.endsWith(`.${fieldName}`)) {
         found = val as string;
         return;
       }
@@ -334,7 +363,10 @@ export function sortParamsDecoder(sort: string): Record<string, 1 | -1> | undefi
  * Validates that every field in the decoded filter object is in the allowed list.
  * Throws BadRequestException if non-filterable fields are found.
  */
-export function getNonFilterableFields(filters: Record<string, any>, allowedFields: string[]): void {
+export function getNonFilterableFields(
+  filters: Record<string, any>,
+  allowedFields: string[],
+): void {
   if (!filters || allowedFields.length === 0) return;
 
   const LOGICAL_OPS = ['$and', '$or', '$nor', '$not'];
@@ -367,8 +399,11 @@ export function getNonFilterableFields(filters: Record<string, any>, allowedFiel
  * Converts page / length query params into skip / limit values.
  * Default: page=1, length=10
  */
-export const queryToPagination = (query: { page?: string | number; length?: string | number }): PaginationData => {
-  const page     = Math.max(1, parseInt(String(query.page   ?? 1),  10) || 1);
+export const queryToPagination = (query: {
+  page?: string | number;
+  length?: string | number;
+}): PaginationData => {
+  const page = Math.max(1, parseInt(String(query.page ?? 1), 10) || 1);
   const pageSize = Math.max(1, parseInt(String(query.length ?? 10), 10) || 10);
 
   return {
@@ -379,9 +414,12 @@ export const queryToPagination = (query: { page?: string | number; length?: stri
 /**
  * Attaches pagination metadata to a PaginationData object.
  */
-export const resultToPagination = (totalItems: number, pagination: PaginationData): PaginationData => {
+export const resultToPagination = (
+  totalItems: number,
+  pagination: PaginationData,
+): PaginationData => {
   const { skip, limit } = pagination.request;
-  const pageSize    = limit || 10;
+  const pageSize = limit || 10;
   const currentPage = Math.floor(skip / pageSize) + 1;
 
   pagination.pagination = {

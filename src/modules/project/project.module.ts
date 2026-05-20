@@ -4,7 +4,7 @@ import { ProjectService } from "./project.service";
 import { ProjectRepository } from "./project.repository";
 import { MongooseModule } from "@nestjs/mongoose";
 import { Project, ProjectSchema } from "./entities/project.schema";
-import { ProjectController } from "./http/project.controller";
+import { ProjectController } from "./controller/project.controller";
 
 
 @Module({

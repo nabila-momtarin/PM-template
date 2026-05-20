@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { RoleService } from "../role.service";
+import { RoleService } from "../service/role.service";
 import { CreateRoleDto } from "../dto/create-role.dto";
 import { RolesQueryDto } from "../dto/getAll-roles.dto";
 import { UpdateRoleDto } from "../dto/update-role.dto";

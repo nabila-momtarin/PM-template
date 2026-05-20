@@ -1,15 +1,15 @@
 import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query } from '@nestjs/common';
 import { UserService } from '../../admin.service';
-import { CreateUserDto } from '../../dto/admin-create-user.dto';
-import { UsersQueryDto } from '../../dto/admin-getAll-users.dto';
-import { UpdateUserDto } from '../../dto/admin-update-user.dto';
-import { ResetPasswordDto } from '../../dto/admin-reset-password.dto';
+import { CreateUserDto } from '../dto/admin-create-user.dto';
+import { UsersQueryDto } from '../dto/admin-getAll-users.dto';
+import { UpdateUserDto } from '../dto/admin-update-user.dto';
+import { ResetPasswordDto } from '../dto/admin-reset-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 
 @Controller('/users')
 export class AdminController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
   private logger = new Logger(AdminController.name);
 
   @Post()
@@ -20,7 +20,6 @@ export class AdminController {
   }
 
   @Get()
-
   async allUsers(@Query() query: UsersQueryDto) {
     console.log('CONTROLLER : admin : allUsers\n');
 

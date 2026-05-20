@@ -49,39 +49,14 @@ export class TicketService {
     };
   }
 
-  private buildTicketFilter(query: TicketQueryDto): Record<string, any> {
-    const filter: Record<string, any> = {};
 
-    if (query.status) {
-      filter.status__eq = query.status;
-    }
-
-    if (query.priority) {
-      filter.priority__eq = query.priority;
-    }
-
-    if (query.ticketType) {
-      filter.ticketType__eq = query.ticketType;
-    }
-
-    if (query.search) {
-      filter.title__like = query.search;
-    }
-
-    return filter;
-  }
 
   async getAllTickets(query: TicketQueryDto) {
     this.logger.log('SERVICE: ticket : getAllTickets');
 
-    const filterObj = this.buildTicketFilter(query);
-
-    this.logger.log(`Filter: ${filterObj}`);
-    this.logger.log(`Filter: ${JSON.stringify(filterObj)}`);
-
     const tickets = await this.ticketRepository.getAllData({
-      //  filter: query.filter ?? '{}',
-      filter: JSON.stringify({ and: filterObj }),
+       filter: query.filter ?? '{}',
+      // filter: JSON.stringify({ and: filterObj }),
       sortStr: query.sort ?? '-createdAt',
       page: String(query.page ?? 1),
       length: String(query.limit ?? query.length ?? 10),
@@ -89,10 +64,10 @@ export class TicketService {
         'status',
         'priority',
         'ticketType',
-        'title',
-        'ticketNumber',
-        'dueDate',
-        'createdAt',
+        // 'title',
+        // 'ticketNumber',
+        // 'dueDate',
+        // 'createdAt',
       ],
       useLean: true,
     });

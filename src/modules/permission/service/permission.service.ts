@@ -1,6 +1,6 @@
 import { ApiResponse } from "src/common/types/response.types";
-import { PERMISSIONS } from "./config/permissions.config";
-import { PermissionCatalog } from "./types/permissions.type";
+import { PERMISSIONS } from "../config/permissions.config";
+import { PermissionCatalog } from "../types/permissions.type";
 
 
 
