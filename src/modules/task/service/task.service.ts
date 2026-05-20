@@ -91,7 +91,7 @@ export class TaskService {
         };
     }
 
-    
+
     async deleteTask(id: string, currentUser: AuthenticatedUser) {
         this.logger.debug('..');
 
@@ -120,5 +120,67 @@ export class TaskService {
             data: { deletedAt: deletedTask.deletedAt },
         }
     }
+
+
+    async updateTask(id: string, dto: UpdateTaskDto, currentUser: AuthenticatedUser) {
+        this.logger.debug('..');
+
+        if (!Types.ObjectId.isValid(id)) {
+            this.logger.error('Invalid task id');
+            throw new BadRequestException('Invalid task id');
+        }
+
+        const taskToUpdate = await this.taskRepository.findById({ id, useLean: true, });
+
+        this.logger.debug('update DTO: ', dto);
+
+        if (!taskToUpdate) {
+            this.logger.error('Task not found for : ', id);
+            throw new NotFoundException('Task not found');
+        }
+
+
+        if (dto.status &&
+            dto.status === 'In Progress'
+        ) {
+            const conflict = await this.taskRepository.findOne({
+                filters: {
+                    assignee: taskToUpdate.assignee,
+                    status: 'In Progress',
+                    _id: { $ne: id },              // exclude the task being updated itself
+                    isDeleted: false
+                }
+            });
+
+            if (conflict) {
+                this.logger.error("This user already has a task in progress. Complete or pause it before starting another.",);
+                throw new BadRequestException("This user already has a task in progress. Complete or pause it before starting another.",);
+            }
+
+        }
+
+        const updatePayload = {
+            ...dto,
+            assignee: new Types.ObjectId(dto.assignee),
+            updatedBy: new Types.ObjectId(currentUser.userId),
+            updatedAt: new Date(),
+        }
+
+        const updatedTask = await this.taskRepository.updateByID(
+            id,
+            updatePayload,
+            { useLean: true, new: true }
+        )
+
+        this.logger.debug('Updated Task : ', updatedTask);
+
+        return {
+            success: true,
+            message: 'Task updated successfully',
+            data: updatedTask
+        }
+
+    };
+
 
 }

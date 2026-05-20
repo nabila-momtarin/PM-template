@@ -30,5 +30,9 @@ export class TaskController {
     }
 
 
-
+   @Patch(':id')
+    async updateTask ( @Param('id') id: string, @Body() dto: UpdateTaskDto, @CurrentUser() currentUser: AuthenticatedUser ) {
+        this.logger.debug('..');
+        return this.taskService.updateTask( id, dto, currentUser );
+    }
 }
