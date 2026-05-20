@@ -91,4 +91,34 @@ export class TaskService {
         };
     }
 
+    
+    async deleteTask(id: string, currentUser: AuthenticatedUser) {
+        this.logger.debug('..');
+
+        if (!Types.ObjectId.isValid(id)) {
+            this.logger.error('Invalid task id');
+            throw new BadRequestException('Invalid task id');
+        }
+
+        const deletedTask = await this.taskRepository.softDeleteById(
+            id,
+            { useLean: true },
+            {
+                deletedAt: new Date(),
+                deletedBy: new Types.ObjectId(currentUser.userId)
+            }
+        );
+
+        if (!deletedTask) {
+            this.logger.error('Task not found for : ', id);
+            throw new NotFoundException('Task not found or Cannot be deleted');
+        }
+
+        return {
+            success: true,
+            message: 'Task deleted successfully',
+            data: { deletedAt: deletedTask.deletedAt },
+        }
+    }
+
 }

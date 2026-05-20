@@ -23,7 +23,12 @@ export class TaskController {
         return this.taskService.getTask( id );
     }
 
-   
+      @Delete(':id')
+    async deleteTask ( @Param('id') id: string , @CurrentUser() currentUser: AuthenticatedUser ) {
+        this.logger.debug('..');
+        return this.taskService.deleteTask( id , currentUser);
+    }
+
 
 
 }
