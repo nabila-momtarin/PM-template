@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { LoginDto } from '../dto/login.dto';
-import { UserRepository } from 'src/modules/user/user.repository';
 import * as argon2 from 'argon2';
 import { TokenService } from 'src/infrastructure/auth/services/token.service';
+import { UserRepository } from 'src/modules/user/repositroy/user.repository';
 
 @Injectable()
 export class AuthService {

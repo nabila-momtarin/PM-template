@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "src/common/repositories/base.repository";
 import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
-import { Project, ProjectDocument } from "./entities/project.schema";
+import { Project, ProjectDocument } from "../entities/project.schema";
 
 
 

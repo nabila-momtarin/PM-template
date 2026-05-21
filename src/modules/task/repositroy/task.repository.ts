@@ -1,8 +1,8 @@
 import { InjectModel } from "@nestjs/mongoose";
 import { BaseRepository } from "src/common/repositories/base.repository";
-import { Task, TaskDocument } from "./entities/task.schema";
 import { Model } from "mongoose";
 import { Injectable } from "@nestjs/common";
+import { Task, TaskDocument } from "../entities/task.schema";
 
 
 @Injectable()
