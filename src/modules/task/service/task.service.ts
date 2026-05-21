@@ -19,7 +19,7 @@ export class TaskService {
 
     return 'TASK-' + (totalTasks + 1);
   }
-  async createTask(dto: CreateTaskDto, currentUser: AuthenticatedUser) {
+  async createTask(dto: CreateTaskDto, files: Express.Multer.File[] = [], currentUser: AuthenticatedUser) {
     this.logger.log('HAPPI HAPPI HAPPI');
 
 
@@ -28,9 +28,12 @@ export class TaskService {
       const taskNumber = await this.generateTaskNumber();
       this.logger.log(`Generated task number: ${taskNumber}`);
 
+      const attachments = files.map((file) => `/uploads/tasks/${file.filename}`);
+
       const taskPayload: Partial<Task> = {
         ...dto,
         taskNumber: taskNumber,
+        attachments,
         projectId: new Types.ObjectId(dto.projectId),
         ticketId: new Types.ObjectId(dto.ticketId),
         assignee: new Types.ObjectId(dto.assignee),

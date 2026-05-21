@@ -7,6 +7,8 @@ import { setupPipes } from './setup/pipes.setup';
 import { setupSecurity } from './setup/security.setup';
 import { setupSwagger } from './setup/swagger.setup';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -32,6 +34,7 @@ async function bootstrap() {
     await app.listen(port);
     console.log(`\n\nServer running on http://localhost:${port}/api/v1\n\n`);
 
+    app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
     // logger.log(`Application running on: http://localhost:${port}`);
     // logger.log(`Environment: ${nodeEnv}`);
     // if (swaggerEnabled) logger.log(`Swagger docs:   http://localhost:${port}/docs`);

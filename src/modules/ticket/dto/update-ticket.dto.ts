@@ -30,10 +30,10 @@ export class UpdateTicketDto {
     projects?: string[];
 
 
-    @IsOptional()
-    @IsArray()
-    @IsUrl({}, { each: true })
-    attachments?: string[];
+    // @IsOptional()
+    // @IsArray()
+    // @IsUrl({}, { each: true })
+    // attachments?: string[];
 
 
     @IsOptional()

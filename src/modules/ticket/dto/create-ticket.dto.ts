@@ -36,10 +36,10 @@ export class CreateTicketDto {
   @IsNotEmpty()
   dueDate: Date;
 
-  @IsArray()
-  @IsOptional()
-  @IsUrl({}, { each: true })
-  attachments?: string[];
+  // @IsArray()
+  // @IsOptional()
+  // @IsUrl({}, { each: true })
+  // attachments?: string[];
 
   @IsArray()
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query, UploadedFiles, UseInterceptors, } from "@nestjs/common";
 import { TaskService } from "../service/task.service";
 import { CreateTaskDto } from "../dto/create-task.dto";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
@@ -7,6 +7,9 @@ import { UpdateTaskDto } from "../dto/update-task.dto";
 import { TaskDueDateUpdateDTO } from "../dto/task-due-date.dto";
 import { TaskQueryDto } from "../dto/task-query.dto";
 
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { createMulterOptions } from "src/common/upload/multer-options";
+
 @Controller('tasks')
 export class TaskController {
     constructor(private readonly taskService: TaskService) { }
@@ -14,9 +17,10 @@ export class TaskController {
     private readonly logger = new Logger(TaskController.name)
 
     @Post()
-    async createTask(@Body() dto: CreateTaskDto, @CurrentUser() currentUser: AuthenticatedUser) {
+    @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tasks')),)
+    async createTask(@Body() dto: CreateTaskDto, @UploadedFiles() files: Express.Multer.File[], @CurrentUser() currentUser: AuthenticatedUser) {
         this.logger.log('WHO FORBID U TO BE HAPPY? JIO KHUSH RAHO... HAHA')
-        return this.taskService.createTask(dto, currentUser);
+        return this.taskService.createTask(dto, files, currentUser);
     }
 
     @Get(':id')
