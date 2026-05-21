@@ -152,7 +152,8 @@ export class UserService {
 
         const updatedUser = await this.userRepository.updateByID(id, dto);
 
-        console.log('updatedUser: SERVICE: ', updatedUser);
+        // console.log('updatedUser: SERVICE: ', updatedUser);
+        this.logger.debug(`Updated User: SERVICE: ${updatedUser}`);
         return {
             success: true,
             message: 'User updated successfully',
@@ -161,17 +162,20 @@ export class UserService {
     }
 
     async resetPassword(id: string, dto: ResetPasswordDto) {
-        console.log('SERVICE : user : resetPassword\n');
+        // console.log('SERVICE : user : resetPassword\n');
+        this.logger.log('...');
 
         const userExist = await this.userRepository.findById({ id, useLean: true });
 
         if (!userExist) {
-            console.log('User not found: ', id);
+            // console.log('User not found: ', id);
+            this.logger.error(`User not found: ${id}`);
             throw new NotFoundException('User not found');
         }
 
         if (dto.newPassword !== dto.confirmPassword) {
-            console.log('Passwords does not match');
+            // console.log('Passwords does not match');
+            this.logger.error('Passwords does not match');
             throw new BadRequestException('Passwords does not match');
         }
 
@@ -184,7 +188,9 @@ export class UserService {
             }
         );
 
-        console.log('updatePassword: SERVICE: ', id);
+        // console.log('updatePassword: SERVICE: ', id);
+        this.logger.debug(`Password updated: SERVICE: ${id}`);
+        
         return {
             success: true,
             message: 'Password updated successfully',

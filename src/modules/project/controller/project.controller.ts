@@ -10,8 +10,6 @@ export class ProjectController {
 
   private readonly logger = new Logger(ProjectController.name);
 
-  private readonly logger = new Logger();
-
   
   @Post()
   async create(@Body() createProjectDto: CreateProjectDto /* , userId: string */) {
