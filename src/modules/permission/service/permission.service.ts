@@ -2,7 +2,7 @@ import { ApiResponse } from "src/common/types/response.types";
 import { PERMISSIONS } from "../config/permissions.config";
 import { PermissionCatalog } from "../types/permissions.type";
 
-
+//etay try catch lagbe?
 
 export class PermissionService {
     constructor() {}
@@ -14,6 +14,10 @@ export class PermissionService {
             data: PERMISSIONS,
         };
     }
+
+
+
+
 
     
 /*   validatePermissions(permissions: RolePermission[]): void {

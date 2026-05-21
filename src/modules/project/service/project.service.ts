@@ -11,56 +11,59 @@ export class ProjectService {
 
   private readonly logger = new Logger(ProjectService.name);
 
-  async create(
-    createProjectDto: CreateProjectDto /* , userId: string */,
-  ) /* : Promise<ProjectDocument>  */ {
-    // console.log('Project SERVICE: create\n');
+  async create(createProjectDto: CreateProjectDto) /* : Promise<ProjectDocument>  */ {
     this.logger.debug('..');
 
-    const newProject = await this.projectRepository.createOne({
-      ...createProjectDto,
-      // createdBy: userId,
-    });
+    try {
+      const newProject = await this.projectRepository.createOne({
+        ...createProjectDto,
+        // createdBy: userId,
+      });
 
-    // console.log('newProject: SERVICE: ', newProject);
-    this.logger.debug(`Created Project: SERVICE: ${newProject}`);
+      // console.log('newProject: SERVICE: ', newProject);
+      this.logger.debug(`Created Project: SERVICE: ${newProject}`);
 
-    return {
-      success: true,
-      message: 'Project created successfully',
-      data: newProject,
-    };
+      return {
+        success: true,
+        message: 'Project created successfully',
+        data: newProject,
+      };
+    } catch (err) {
+      this.logger.error('ProjectService.create failed', err instanceof Error ? err.stack : err);
+      throw err;
+    }
   }
 
 
   async findAll(query: ProjectQueryDto) {
-    // console.log('Project SERVICE: findAll\n');
     this.logger.debug('..');
 
+    try {
+      this.logger.debug(`Query: SERVICE: ${query}`);
 
-    // const filter =this.projectRepository.
-    // console.log("\n\nQuery: SERVICE: ", query);
-    this.logger.debug(`Query: SERVICE: ${query}`);
+      const projects = await this.projectRepository.getAllData({
+        filter: query.filter ?? '{}',
+        // filter: this.buildProjectFilter(query),
+        sortStr: query.sort ?? '-createdAt',
+        page: String(query.page ?? 1),
+        length: String(query.limit ?? query.length ?? 10),
+        filterableFields: ['type', 'title']
 
-    const projects = await this.projectRepository.getAllData({
-      filter: query.filter ?? '{}',
-      // filter: this.buildProjectFilter(query),
-      sortStr: query.sort ?? '-createdAt',
-      page: String(query.page ?? 1),
-      length: String(query.limit ?? query.length ?? 10),
-      filterableFields: ['type', 'title']
+      });
 
-    });
+      // console.log("projects: SERVICE: ", projects);
+      this.logger.debug(`Projects: SERVICE: ${projects}`);
 
-    // console.log("projects: SERVICE: ", projects);
-    this.logger.debug(`Projects: SERVICE: ${projects}`);
-
-    return {
-      success: true,
-      message: 'Project fetched successfully',
-      data: projects.data,
-      pagination: projects.pagination
-    };
+      return {
+        success: true,
+        message: 'Project fetched successfully',
+        data: projects.data,
+        pagination: projects.pagination
+      };
+    } catch (err) {
+      this.logger.error('ProjectService.findAll failed', err instanceof Error ? err.stack : err);
+      throw err;
+    }
   }
 
   // private buildProjectFilter(query: ProjectQueryDto):string {
@@ -85,23 +88,27 @@ export class ProjectService {
     // console.log('Project SERVICE: getProjectById\n');
     this.logger.debug('..');
 
+    try {
+      const project = await this.projectRepository.findById({
+        id: projectId
+      });
 
-    const project = await this.projectRepository.findById({
-      id: projectId
-    });
+      if (!project) {
+        this.logger.error('Project Not Found');
+        throw new NotFoundException('Project not found');
+      }
+      // console.log("project: SERVICE: ", project);
+      this.logger.debug(`Fetched Project: SERVICE: ${project}`);
 
-    if (!project) {
-      this.logger.error('Project Not Found');
-      throw new NotFoundException('Project not found');
+      return {
+        success: true,
+        message: 'Project fetched successfully',
+        data: project,
+      };
+    } catch (err) {
+      this.logger.error('ProjectService.getProjectById failed', err instanceof Error ? err.stack : err);
+      throw err;
     }
-    // console.log("project: SERVICE: ", project);
-    this.logger.debug(`Fetched Project: SERVICE: ${project}`);
-
-    return {
-      success: true,
-      message: 'Project fetched successfully',
-      data: project,
-    };
   }
 
 
@@ -109,64 +116,69 @@ export class ProjectService {
     // console.log('Project SERVICE: deleteByIdProject\n');
     this.logger.debug('..');
 
+    try {
+      const projectToDelete = await this.projectRepository.deleteById(projectId);
 
-    const projectToDelete = await this.projectRepository.deleteById(projectId);
-
-    if (!projectToDelete) {
-      // console.log('Project Not Found');
-      this.logger.error('Project Not Found');
-      throw new NotFoundException('Project not found');
-    }
-
-    // console.log("Deleted Proejct : SERVICE: ", projectToDelete);
-    this.logger.debug(`Deleted Project: SERVICE: ${projectToDelete}`);
-
-    return {
-      success: true,
-      message: 'Project deleted successfully',
-      data: {
-        id: projectId,
-        title: projectToDelete.title
+      if (!projectToDelete) {
+        // console.log('Project Not Found');
+        this.logger.error('Project Not Found');
+        throw new NotFoundException('Project not found');
       }
 
-    };
+      // console.log("Deleted Proejct : SERVICE: ", projectToDelete);
+      this.logger.debug(`Deleted Project: SERVICE: ${projectToDelete}`);
+
+      return {
+        success: true,
+        message: 'Project deleted successfully',
+        data: {
+          id: projectId,
+          title: projectToDelete.title
+        }
+
+      };
+    } catch (err) {
+      this.logger.error('ProjectService.deleteByIdProject failed', err instanceof Error ? err.stack : err);
+      throw err;
+    }
   }
 
   async updateProject(projectId: string, updateProjectDto: UpdateProjectDto) {
-    // console.log('Project SERVICE: updateProject\n');
+
     this.logger.debug('..');
 
+    try {
+      // console.log("updateProjectDto: SERVICE: ", updateProjectDto);
+      this.logger.log(`Update Project DTO: SERVICE: ${updateProjectDto}`);
 
-    // console.log("updateProjectDto: SERVICE: ", updateProjectDto);
-    this.logger.log(`Update Project DTO: SERVICE: ${updateProjectDto}`);
+      // if(!updateProjectDto) {
+      //   console.log('No updates provided');
+      //   throw new NotFoundException('No updates provided');
+      // }
 
-    // if(!updateProjectDto) {
-    //   console.log('No updates provided');
-    //   throw new NotFoundException('No updates provided');
-    // }
+      const updatedProject = await this.projectRepository.updateByID(
+        projectId,
+        updateProjectDto
+      );
 
-    const updatedProject = await this.projectRepository.updateByID(
-      projectId,
-      updateProjectDto
-    );
+      if (!updatedProject) {
+        // console.log('Project Not Found');
+        this.logger.error('Project Not Found');
+        throw new NotFoundException('Project not found');
+      }
 
+      // console.log("updatedProject: SERVICE : ", updatedProject);
+      this.logger.debug(`Updated Project: SERVICE: ${updatedProject}`);
 
-    if (!updatedProject) {
-      // console.log('Project Not Found');
-      this.logger.error('Project Not Found');
-      throw new NotFoundException('Project not found');
+      return {
+        success: true,
+        message: 'Project updated successfully',
+        data: updatedProject,
+      }
+    } catch (err) {
+      this.logger.error('ProjectService.updateProject failed', err instanceof Error ? err.stack : err);
+      throw err;
     }
-
-    // console.log("updatedProject: SERVICE : ", updatedProject);
-    this.logger.debug(`Updated Project: SERVICE: ${updatedProject}`);
-
-
-    return {
-      success: true,
-      message: 'Project updated successfully',
-      data: updatedProject,
-    }
-
   }
 
 }
