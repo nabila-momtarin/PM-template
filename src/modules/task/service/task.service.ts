@@ -139,13 +139,18 @@ export class TaskService {
 
       const { projectId, ticketId, ...resTask } = task;
 
+      const ticket = ticketId && typeof ticketId === 'object' && 'priority' in ticketId ? ticketId : null;
+      // const project = projectId && typeof projectId === 'object' ? projectId : null;
+
       return {
         success: true,
         message: 'Task fetched successfully',
         data: {
           ...resTask,
+          // derived field from populated ticket
+          priority: ticket?.priority ?? null,
           project: projectId,
-          ticket: ticketId,
+          ticket/* : ticketId */,
         },
       };
     } catch (err) {
