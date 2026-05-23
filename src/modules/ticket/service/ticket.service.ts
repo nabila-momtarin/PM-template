@@ -9,6 +9,7 @@ import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
+import { mergeAndFilter } from 'src/common/utils/params-decoder';
 
 @Injectable()
 export class TicketService {
@@ -96,6 +97,22 @@ export class TicketService {
     }
   }
 
+
+  //all status tickets
+
+
+  async getTicketsByStatus(status: string, query: TicketQueryDto) {
+    this.logger.log(`SERVICE: ticket : getTicketsByStatus -> ${status}`);
+
+    return this.getAllTickets({
+      ...query,
+      filter: mergeAndFilter(query.filter, {
+        status__eq: status,
+      }),
+    });
+  }
+
+  
   async getTicketById(ticketId: string) {
     this.logger.log('SERVICE: ticket : getTicketById');
 

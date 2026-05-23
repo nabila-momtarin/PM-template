@@ -1,4 +1,11 @@
 
+export type PermissionCategory =
+  | 'Tickets'
+  | 'Projects'
+  | 'Tasks'
+  | 'Admin'
+  | 'Role';
+
 
 export type PermissionMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
@@ -10,7 +17,7 @@ export type RolePermission = {
               
 export type PermissionCatalogItem = RolePermission & {
     label: string;
-    category: string;
+    category: PermissionCategory;
 };
 
 export type PermissionCatalog = PermissionCatalogItem[];
