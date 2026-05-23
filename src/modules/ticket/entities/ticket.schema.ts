@@ -57,8 +57,8 @@ export class Ticket {
   @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER })
   deletedBy?: Types.ObjectId;
 
-  @Prop({ type: Date, required: true })
-  createdAt: Date;
+  // @Prop({ type: Date, required: true })
+  // createdAt: Date;
 
   @Prop({ type: Date })
   updatedAt?: Date;

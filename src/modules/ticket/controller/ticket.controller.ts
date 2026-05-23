@@ -1,4 +1,4 @@
-import { Delete, Get, Logger, Param, Patch } from '@nestjs/common';
+import { Delete, Get, Logger, Param, Patch, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { Body, Controller, Post, Query } from '@nestjs/common';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
@@ -9,6 +9,8 @@ import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { createMulterOptions } from "src/common/upload/multer-options";
 
 @Controller('tickets')
 export class TicketController {
@@ -17,11 +19,12 @@ export class TicketController {
   private readonly logger = new Logger(TicketController.name);
 
   @Post()
-  createTicket(@Body() dto: CreateTicketDto, @CurrentUser() currentUser: AuthenticatedUser) {
+  @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tickets')),)
+  createTicket(@Body() dto: CreateTicketDto, @UploadedFiles() files: Express.Multer.File[], @CurrentUser() currentUser: AuthenticatedUser) {
 
     this.logger.debug('CONTROLLER : admin : createTicket\n');
 
-    return this.ticketService.createTicket(dto, currentUser);
+    return this.ticketService.createTicket(dto, files, currentUser);
 
   }
 

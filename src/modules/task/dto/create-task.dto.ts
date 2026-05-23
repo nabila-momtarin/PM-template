@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsMongoId, IsDateString, MinLength, IsInt, IsUrl, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsMongoId, IsDateString, MinLength, IsInt, IsUrl, Min, Allow } from 'class-validator';
 
 export class CreateTaskDto {
     @IsString()
@@ -37,4 +37,10 @@ export class CreateTaskDto {
     // @IsArray()
     // @IsUrl({}, { each: true })
     // attachments?: string[];
+
+    // Important for multipart/form-data + ValidationPipe
+  // We do NOT trust this value. Actual files come from @UploadedFiles().
+  @Allow()
+  @IsOptional()
+  attachments?: unknown;
 }

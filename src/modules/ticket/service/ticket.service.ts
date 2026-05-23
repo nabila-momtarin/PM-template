@@ -9,9 +9,10 @@ import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
+
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) {}
+  constructor(private readonly ticketRepository: TicketRepository) { }
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -21,16 +22,21 @@ export class TicketService {
     return `TKT-${totalTickets + 1}`;
   }
 
-  async createTicket(dto: CreateTicketDto, currentUser: AuthenticatedUser) {
+  async createTicket(dto: CreateTicketDto, files: Express.Multer.File[] = [], currentUser: AuthenticatedUser) {
     this.logger.log('SERVICE: ticket : createTicket');
 
     try {
       const ticketNumber = await this.generateTicketNumber();
       this.logger.log(`Generated ticket number: ${ticketNumber}`);
 
+      const uploadedAttachments = files.map((file) => `/uploads/tickets/${file.filename}`);
+
+      this.logger.log(uploadedAttachments);
+
       const ticketPayload: Partial<TicketDocument> = {
         ...dto,
         ticketNumber: ticketNumber,
+        attachments: uploadedAttachments,
         createdBy: new Types.ObjectId(currentUser.userId),
         projects: dto.projects?.map((id) => new Types.ObjectId(id)) ?? [],
       };

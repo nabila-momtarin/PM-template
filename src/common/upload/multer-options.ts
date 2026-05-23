@@ -6,8 +6,9 @@ import { existsSync, mkdirSync } from 'fs';
 
 const allowedMimeTypes = [
   'image/jpeg',
+  'image/jpg',
   'image/png',
-  'image/webp',
+  // 'image/webp',
   'application/pdf',
 ];
 
@@ -34,7 +35,7 @@ export const createMulterOptions = (folder: 'tasks' | 'tickets'): MulterOptions 
   fileFilter: (_req, file, cb) => {
     if (!allowedMimeTypes.includes(file.mimetype)) {
       return cb(
-        new BadRequestException('Only jpg, png, webp and pdf files are allowed'),
+        new BadRequestException('Only jpeg, jpg, png, and pdf files are allowed'),
         false,
       );
     }

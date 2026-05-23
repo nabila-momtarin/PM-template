@@ -24,6 +24,7 @@ export class TaskController {
     }
 
     @Get(':id')
+
     async getTask(@Param('id') id: string) {
         this.logger.debug('..');
         return this.taskService.getTask(id);

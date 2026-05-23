@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  Allow,
   IsArray,
   IsDate,
   IsEnum,
@@ -16,13 +17,13 @@ export class CreateTicketDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
-//   @MaxLength(150)
+  //   @MaxLength(150)
   title: string;
 
   @IsString()
   @IsOptional()
   description?: string;
-  
+
   @IsEnum(TicketType)
   @IsNotEmpty()
   ticketType: TicketType;
@@ -40,6 +41,10 @@ export class CreateTicketDto {
   // @IsOptional()
   // @IsUrl({}, { each: true })
   // attachments?: string[];
+
+  @Allow()
+  @IsOptional()
+  attachments?: unknown;
 
   @IsArray()
   @IsOptional()

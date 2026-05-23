@@ -28,12 +28,14 @@ export class TaskService {
       const taskNumber = await this.generateTaskNumber();
       this.logger.log(`Generated task number: ${taskNumber}`);
 
-      const attachments = files.map((file) => `/uploads/tasks/${file.filename}`);
+      const uploadedAttachments = files.map((file) => `/uploads/tasks/${file.filename}`);
+
+      this.logger.log(uploadedAttachments);
 
       const taskPayload: Partial<Task> = {
         ...dto,
         taskNumber: taskNumber,
-        attachments,
+        attachments : uploadedAttachments,
         projectId: new Types.ObjectId(dto.projectId),
         ticketId: new Types.ObjectId(dto.ticketId),
         assignee: new Types.ObjectId(dto.assignee),
