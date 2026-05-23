@@ -3,6 +3,8 @@ import { RoleService } from '../service/role.service';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { RolesQueryDto } from '../dto/getAll-roles.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 
 @Controller('roles')
 export class RoleController {
@@ -34,11 +36,11 @@ export class RoleController {
   }
 
   @Delete(':roleId')
-  async deleteRole(@Param('roleId') roleId: string) {
+  async deleteRole(@Param('roleId') roleId: string, @CurrentUser() user: AuthenticatedUser) {
     // console.log('CONTROLLER: Deleting role by ID\n');
     this.logger.log('...');
 
-    return this.roleService.deleteRole(roleId);
+    return this.roleService.deleteRole(roleId, user);
   }
 
   @Patch(':roleId')

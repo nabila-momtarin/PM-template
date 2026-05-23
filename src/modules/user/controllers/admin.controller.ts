@@ -35,10 +35,10 @@ export class AdminController {
   }
 
   @Delete(':id')
-  async deleteUser(@Param('id') id: string) {
+  async deleteUser(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     this.logger.debug('CONTROLLER : admin : delete user\n');
 
-    return this.userService.deleteUser(id);
+    return this.userService.deleteUser(id, user);
   }
 
   @Patch(':id')

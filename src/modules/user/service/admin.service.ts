@@ -22,7 +22,7 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
-  ) {}
+  ) { }
 
   private logger = new Logger(UserService.name);
 
@@ -144,11 +144,20 @@ export class UserService {
     }
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(id: string, currentUser: AuthenticatedUser) {
     this.logger.log('...');
 
     try {
-      const deletedUser = await this.userRepository.deleteById(id);
+      // const deletedUser = await this.userRepository.deleteById(id);
+
+      const deletedUser = await this.userRepository.softDeleteById(
+        id,
+        { useLean: true },
+        {
+          deletedAt: new Date(),
+          deletedBy: new Types.ObjectId(currentUser.userId),
+        },
+      );
 
       if (!deletedUser) {
         // console.error('User not found: ', id);

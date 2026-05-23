@@ -3,6 +3,8 @@ import { ProjectRepository } from '../repositroy/project.repository';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectQueryDto } from '../dto/getAll-project.dto';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
+import { Types } from 'mongoose';
 
 
 @Injectable()
@@ -112,28 +114,37 @@ export class ProjectService {
   }
 
 
-  async deleteByIdProject(projectId: string) {
+  async deleteByIdProject(projectId: string, currentUser: AuthenticatedUser) {
     // console.log('Project SERVICE: deleteByIdProject\n');
     this.logger.debug('..');
 
     try {
-      const projectToDelete = await this.projectRepository.deleteById(projectId);
+      // const projectToDelete = await this.projectRepository.deleteById(projectId);
 
-      if (!projectToDelete) {
+      const deletedProject = await this.projectRepository.softDeleteById(
+        projectId,
+        { useLean: true },
+        {
+          deletedAt: new Date(),
+          deletedBy: new Types.ObjectId(currentUser.userId),
+        },
+      );
+
+      if (!deletedProject) {
         // console.log('Project Not Found');
         this.logger.error('Project Not Found');
         throw new NotFoundException('Project not found');
       }
 
       // console.log("Deleted Proejct : SERVICE: ", projectToDelete);
-      this.logger.debug(`Deleted Project: SERVICE: ${projectToDelete}`);
+      this.logger.debug(`Deleted Project: SERVICE: ${deletedProject}`);
 
       return {
         success: true,
         message: 'Project deleted successfully',
         data: {
           id: projectId,
-          title: projectToDelete.title
+          title: deletedProject.title
         }
 
       };

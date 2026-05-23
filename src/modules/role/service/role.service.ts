@@ -3,10 +3,15 @@ import { RoleRepository } from '../repositroy/role.repository';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { RolesQueryDto } from '../dto/getAll-roles.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
+import { UserRepository } from 'src/modules/user/repositroy/user.repository';
+import { Types } from 'mongoose';
+import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 
 @Injectable()
 export class RoleService {
-  constructor(private readonly roleRepository: RoleRepository) {}
+  constructor(private readonly roleRepository: RoleRepository,
+    private readonly userRepository: UserRepository
+  ) { }
 
   private readonly logger = new Logger(RoleService.name);
 
@@ -95,24 +100,21 @@ export class RoleService {
     }
   }
 
-  async deleteRole(roleId: string) {
+  async deleteRole(roleId: string, currentUser: AuthenticatedUser) {
     // console.log('SERVICE: Deleting role by ID\n');
     this.logger.debug('..');
 
     try {
-      const role = await this.roleRepository.findById({ id: roleId });
+      const role = await this.roleRepository.findById({
+        id: roleId,
+        useLean: true,
+      });
 
       if (!role) {
         // console.log('Role not found: SERVICE: ', roleId);
         this.logger.debug(`Role not found: SERVICE: ${roleId}`);
 
         throw new NotFoundException('Role not found');
-
-        //   return {
-        //     success: false,
-        //     message: 'Role not found',
-        //     data: null,
-        //   };
       }
 
       if (role.isSuperAdmin) {
@@ -121,8 +123,29 @@ export class RoleService {
         throw new BadRequestException('Super Admin role cannot be deleted');
       }
 
-      const deletedRole = await this.roleRepository.deleteById(roleId);
 
+      //check if users are assigned to this role
+      const hasAssignedUser = await this.userRepository.exists({
+        role: new Types.ObjectId(roleId),
+      });
+
+      if (hasAssignedUser) {
+        this.logger.error('Cannot delete role because users are assigned to this role');
+        throw new BadRequestException('Cannot delete role because users are assigned to this role');
+      }
+      // const deletedRole = await this.roleRepository.deleteById(roleId);
+      const deletedRole = await this.roleRepository.softDeleteById(
+        roleId,
+        { useLean: true },
+        {
+          deletedAt: new Date(),
+          deletedBy: new Types.ObjectId(currentUser.userId),
+        },
+      );
+
+      if (!deletedRole) {
+        throw new NotFoundException('Role not found');
+      }
       // console.log('deletedRole: SERVICE: ', deletedRole);
       this.logger.debug(`Deleted Role: SERVICE: ${deletedRole}`);
 
