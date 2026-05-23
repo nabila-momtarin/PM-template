@@ -8,9 +8,11 @@ import { UpdateTaskDto } from '../dto/update-task.dto';
 import { TaskDueDateUpdateDTO } from '../dto/task-due-date.dto';
 import { TaskQueryDto } from '../dto/task-query.dto';
 
+import { mergeAndFilter } from 'src/common/utils/params-decoder';
+
 @Injectable()
 export class TaskService {
-  constructor(private readonly taskRepository: TaskRepository) { }
+  constructor(private readonly taskRepository: TaskRepository) {}
 
   private readonly logger = new Logger(TaskService.name);
 
@@ -19,12 +21,14 @@ export class TaskService {
 
     return 'TASK-' + (totalTasks + 1);
   }
-  async createTask(dto: CreateTaskDto, files: Express.Multer.File[] = [], currentUser: AuthenticatedUser) {
+  async createTask(
+    dto: CreateTaskDto,
+    files: Express.Multer.File[] = [],
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('HAPPI HAPPI HAPPI');
 
-
     try {
-
       const taskNumber = await this.generateTaskNumber();
       this.logger.log(`Generated task number: ${taskNumber}`);
 
@@ -35,7 +39,7 @@ export class TaskService {
       const taskPayload: Partial<Task> = {
         ...dto,
         taskNumber: taskNumber,
-        attachments : uploadedAttachments,
+        attachments: uploadedAttachments,
         projectId: new Types.ObjectId(dto.projectId),
         ticketId: new Types.ObjectId(dto.ticketId),
         assignee: new Types.ObjectId(dto.assignee),
@@ -59,11 +63,49 @@ export class TaskService {
     }
   }
 
+  async getAllTask(query: TaskQueryDto) {
+    this.logger.debug('..');
+
+    try {
+      const tasks = await this.taskRepository.getAllData({
+        filter: query.filter ?? '{}',
+        sortStr: query.sort ?? '-createdAt',
+        page: String(query.page ?? 1),
+        length: String(query.limit ?? query.length ?? 10),
+        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title'],
+        useLean: true,
+      });
+
+      this.logger.log('tasks: SERVICE: ', tasks);
+
+      return {
+        success: true,
+        message: 'Tasks fetched successfully',
+        data: tasks.data,
+        pagination: tasks.pagination,
+      };
+    } catch (err) {
+      this.logger.error(err);
+      this.logger.error('TaskService.getAllTask failed', err instanceof Error ? err.stack : err);
+      throw err;
+    }
+  }
+
+  async getTasksByStatus(status: string, query: TaskQueryDto) {
+    this.logger.log(`SERVICE: task : getTasksByStatus -> ${status}`);
+
+    return this.getAllTask({
+      ...query,
+      filter: mergeAndFilter(query.filter, {
+        status__eq: status,
+      }),
+    });
+  }
+
   async getTask(id: string) {
     this.logger.debug('..');
 
     try {
-
       if (!Types.ObjectId.isValid(id)) {
         this.logger.error('Invalid task id');
         throw new BadRequestException('Invalid task id');
@@ -106,7 +148,6 @@ export class TaskService {
           ticket: ticketId,
         },
       };
-
     } catch (err) {
       this.logger.error(err);
       this.logger.error('TaskService.getTask failed', err instanceof Error ? err.stack : err);
@@ -118,7 +159,6 @@ export class TaskService {
     this.logger.debug('..');
 
     try {
-
       if (!Types.ObjectId.isValid(id)) {
         this.logger.error('Invalid task id');
         throw new BadRequestException('Invalid task id');
@@ -143,7 +183,6 @@ export class TaskService {
         message: 'Task deleted successfully',
         data: { deletedAt: deletedTask.deletedAt },
       };
-
     } catch (err) {
       this.logger.error(err);
       this.logger.error('TaskService.deleteTask failed', err instanceof Error ? err.stack : err);
@@ -155,7 +194,6 @@ export class TaskService {
     this.logger.debug('..');
 
     try {
-
       if (!Types.ObjectId.isValid(id)) {
         this.logger.error('Invalid task id');
         throw new BadRequestException('Invalid task id');
@@ -209,7 +247,6 @@ export class TaskService {
         message: 'Task updated successfully',
         data: updatedTask,
       };
-
     } catch (err) {
       this.logger.error(err);
       this.logger.error('TaskService.updateTask failed', err instanceof Error ? err.stack : err);
@@ -272,7 +309,10 @@ export class TaskService {
       };
     } catch (err) {
       this.logger.error(err);
-      this.logger.error('TaskService.TaskDueDateUpdate failed', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'TaskService.TaskDueDateUpdate failed',
+        err instanceof Error ? err.stack : err,
+      );
       throw err;
     }
   }
@@ -302,31 +342,4 @@ export class TaskService {
 
   //     return filter;
   //   }
-  async getAllTask(query: TaskQueryDto) {
-    this.logger.debug('..');
-
-    try {
-      const tasks = await this.taskRepository.getAllData({
-        filter: query.filter ?? '{}',
-        sortStr: query.sort ?? '-createdAt',
-        page: String(query.page ?? 1),
-        length: String(query.limit ?? query.length ?? 10),
-        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title'],
-        useLean: true,
-      });
-
-      this.logger.log('tasks: SERVICE: ', tasks);
-
-      return {
-        success: true,
-        message: 'Tasks fetched successfully',
-        data: tasks.data,
-        pagination: tasks.pagination,
-      };
-    } catch (err) {
-      this.logger.error(err);
-      this.logger.error('TaskService.getAllTask failed', err instanceof Error ? err.stack : err);
-      throw err;
-    }
-  }
 }
