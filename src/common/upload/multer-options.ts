@@ -12,7 +12,7 @@ const allowedMimeTypes = [
   'application/pdf',
 ];
 
-export const createMulterOptions = (folder: 'tasks' | 'tickets'): MulterOptions => ({
+export const createMulterOptions = (folder: 'tasks' | 'tickets' | 'profilePhoto'): MulterOptions => ({
   storage: diskStorage({
     destination: (_req, _file, cb) => {
       const uploadPath = join(process.cwd(), 'uploads', folder);

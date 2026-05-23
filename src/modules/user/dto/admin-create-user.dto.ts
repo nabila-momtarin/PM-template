@@ -34,7 +34,6 @@ export class CreateUserDto {
         minNumbers: 1,
         minSymbols: 1,
     })
-    // @Exclude({ toPlainOnly: true })
     password: string;
 
     @IsNotEmpty()
@@ -56,21 +55,14 @@ export class CreateUserDto {
     })
     phoneNumber?: string;
 
-    @Transform(({ value }) => {
-        if (typeof value !== 'string') return value;
+     // @Transform(({ value }) => {
+    //     if (typeof value !== 'string') return value;
 
-        const trimmedValue = value.trim();
+    //     const trimmedValue = value.trim();
 
-        return trimmedValue === '' ? undefined : trimmedValue;
-    })
+    //     return trimmedValue === '' ? undefined : trimmedValue;
+    // })
     @IsOptional()
     @IsString()
-    @IsUrl(
-        {
-            protocols: ['http', 'https'],
-            require_protocol: true,
-        },
-        { message: 'Photo must be a valid URL' },
-    )
     photo?: string;
 }
