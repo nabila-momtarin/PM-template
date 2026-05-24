@@ -174,6 +174,7 @@ export class TicketService {
       return {
         success: true,
         message: 'Ticket deleted successfully',
+        data: null,
       };
     } catch (err) {
       this.logger.error(
@@ -211,7 +212,7 @@ export class TicketService {
       const updatableFields: Partial<UpdateTicketDto> = {
         ...dto,
         ...(uploadedAttachments.length > 0 && { attachments: uploadedAttachments }),
-        // updatedBy: new Types.ObjectId(currentUser.userId)
+        // updatedBy: new Types.ObjectId(currentUser.userId),
         updatedBy: currentUser.userId.toString(),
       };
 
@@ -274,7 +275,7 @@ export class TicketService {
         ticketId,
         {
           dueDate: newDueDate,
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -330,7 +331,7 @@ export class TicketService {
         ticketId,
         {
           qaStatus: dto.qaStatus,
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           // useLean: true,
@@ -382,7 +383,7 @@ export class TicketService {
         ticketId,
         {
           status: 'In Progress',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -397,7 +398,7 @@ export class TicketService {
       this.logger.log(updatedTicketInProgress);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to In Progress',
         data: {
           _id: updatedTicketInProgress._id,
           ticketNumber: updatedTicketInProgress.ticketNumber,
@@ -434,7 +435,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Developed',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -449,7 +450,7 @@ export class TicketService {
       this.logger.log(updatedTicketDeveloped);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Developed',
         data: {
           _id: updatedTicketDeveloped._id,
           ticketNumber: updatedTicketDeveloped.ticketNumber,
@@ -486,7 +487,7 @@ export class TicketService {
         ticketId,
         {
           status: 'QA In Progress',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -501,7 +502,7 @@ export class TicketService {
       this.logger.log(updatedTicketQaInProgress);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to QA In Progress',
         data: {
           _id: updatedTicketQaInProgress._id,
           ticketNumber: updatedTicketQaInProgress.ticketNumber,
@@ -538,7 +539,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Ready for Release',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -553,7 +554,7 @@ export class TicketService {
       this.logger.log(updatedTicketReadyForRelease);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Ready for Release',
         data: {
           _id: updatedTicketReadyForRelease._id,
           ticketNumber: updatedTicketReadyForRelease.ticketNumber,
@@ -590,7 +591,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Released',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -605,7 +606,7 @@ export class TicketService {
       this.logger.log(updatedTicketReleased);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Released',
         data: {
           _id: updatedTicketReleased._id,
           ticketNumber: updatedTicketReleased.ticketNumber,
@@ -642,7 +643,8 @@ export class TicketService {
         ticketId,
         {
           status: 'Closed',
-          updatedBy: currentUser.userId.toString(),
+          // updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId), 
         },
         {
           useLean: true,
@@ -657,7 +659,7 @@ export class TicketService {
       this.logger.log(updatedTicketClosed);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Closed',
         data: {
           _id: updatedTicketClosed._id,
           ticketNumber: updatedTicketClosed.ticketNumber,

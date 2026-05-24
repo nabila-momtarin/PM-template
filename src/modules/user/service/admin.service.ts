@@ -243,7 +243,7 @@ export class AdminService {
 
       return {
         success: true,
-        message: 'Password updated successfully',
+        message: 'Password reset successfully',
         data: null,
       };
     } catch (err) {

@@ -104,7 +104,7 @@ export class ProjectService {
 
       return {
         success: true,
-        message: 'Project fetched successfully',
+        message: 'Projects fetched successfully',
         data: project,
       };
     } catch (err) {
