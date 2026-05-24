@@ -42,18 +42,26 @@ export class AdminController {
   }
 
   @Patch(':id')
-  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  async updateUser(
+    @Param('id') id: string, 
+    @Body() dto: UpdateUserDto,
+  @CurrentUser() currentUser: AuthenticatedUser, 
+  ) {
 
     this.logger.debug('...');
 
-    return this.adminService.updateUser(id, dto);
+    return this.adminService.updateUser(id, dto, currentUser);
   }
 
   @Patch(':id/reset-password')
-  async resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+  async resetPassword(
+    @Param('id') id: string, 
+    @Body() dto: ResetPasswordDto,
+    @CurrentUser() currentUser: AuthenticatedUser, 
+  ) {
 
     this.logger.debug('...');
 
-    return this.adminService.resetPassword(id, dto);
+    return this.adminService.resetPassword(id, dto, currentUser);
   }
 }

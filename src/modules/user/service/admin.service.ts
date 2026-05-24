@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -151,8 +152,11 @@ export class AdminService {
         data: user,
       };
     } catch (err) {
-      this.logger.error('AdminService.getAUser: Error in getting a user', err instanceof Error ? err.stack : err);
-      throw err; 
+      this.logger.error(
+        'AdminService.getAUser: Error in getting a user',
+        err instanceof Error ? err.stack : err,
+      );
+      throw err;
     }
   }
 
@@ -161,6 +165,14 @@ export class AdminService {
 
     try {
       // const deletedUser = await this.userRepository.deleteById(id);
+
+      // if (id === currentUser.userId) {
+      //   throw new BadRequestException('You cannot delete your own account');
+      // }
+
+      if (new Types.ObjectId(id).toString() === new Types.ObjectId(currentUser.userId).toString())
+  throw new BadRequestException('You cannot delete your own account');
+
 
       const deletedUser = await this.userRepository.softDeleteById(
         id,
@@ -196,10 +208,20 @@ export class AdminService {
     }
   }
 
-  async updateUser(id: string, dto: UpdateUserDto) {
+  async updateUser(id: string, dto: UpdateUserDto, currentUser: AuthenticatedUser) {
     this.logger.log('...');
 
     try {
+      const callerRole = await this.roleRepository.findById({
+        id: currentUser.roleId,
+        useLean: true,
+      });
+      if (!callerRole?.isSuperAdmin) throw new ForbiddenException('Access denied');
+
+      if (id === currentUser.userId) {
+        throw new BadRequestException('Use PATCH /api/v1/me to update your own profile');
+      }
+
       const userExist = await this.userRepository.findById({ id, useLean: true });
 
       if (!userExist) {
@@ -207,7 +229,13 @@ export class AdminService {
         throw new NotFoundException('User not found');
       }
 
-      const updatedUser = await this.userRepository.updateByID(id, dto);
+      // const updatedUser = await this.userRepository.updateByID(id, dto);
+
+      const updatedUser = await this.userRepository.updateByID(id, {
+        ...dto,
+        ...(dto.role && { role: new Types.ObjectId(dto.role) }),
+        updatedBy: new Types.ObjectId(currentUser.userId),
+      });
 
       // console.log('updatedUser: SERVICE: ', updatedUser);
       this.logger.debug(`Updated User: SERVICE: ${updatedUser}`);
@@ -225,11 +253,17 @@ export class AdminService {
     }
   }
 
-  async resetPassword(id: string, dto: ResetPasswordDto) {
+  async resetPassword(id: string, dto: ResetPasswordDto, currentUser: AuthenticatedUser) {
     // console.log('SERVICE : user : resetPassword\n');
     this.logger.log('...');
 
     try {
+      if (id === currentUser.userId) {
+        throw new BadRequestException(
+          'Use PATCH /api/v1/me/change-password to reset your own password',
+        );
+      }
+
       const userExist = await this.userRepository.findById({ id, useLean: true });
 
       if (!userExist) {
@@ -248,6 +282,7 @@ export class AdminService {
 
       await this.userRepository.updateByID(id, {
         password: hashedPassword,
+        updatedBy: new Types.ObjectId(currentUser.userId),
       });
 
       // console.log('updatePassword: SERVICE: ', id);
