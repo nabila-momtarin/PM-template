@@ -13,7 +13,7 @@ import { mergeAndFilter } from 'src/common/utils/params-decoder';
 
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) { }
+  constructor(private readonly ticketRepository: TicketRepository) {}
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -23,7 +23,11 @@ export class TicketService {
     return `TKT-${totalTickets + 1}`;
   }
 
-  async createTicket(dto: CreateTicketDto, files: Express.Multer.File[] = [], currentUser: AuthenticatedUser) {
+  async createTicket(
+    dto: CreateTicketDto,
+    files: Express.Multer.File[] = [],
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('SERVICE: ticket : createTicket');
 
     try {
@@ -97,9 +101,7 @@ export class TicketService {
     }
   }
 
-
   //all status tickets
-
 
   async getTicketsByStatus(status: string, query: TicketQueryDto) {
     this.logger.log(`SERVICE: ticket : getTicketsByStatus -> ${status}`);
@@ -112,7 +114,6 @@ export class TicketService {
     });
   }
 
-  
   async getTicketById(ticketId: string) {
     this.logger.log('SERVICE: ticket : getTicketById');
 
@@ -183,7 +184,12 @@ export class TicketService {
     }
   }
 
-  async updateTicket(ticketId: string, dto: UpdateTicketDto, currentUser: AuthenticatedUser, files: Express.Multer.File[] = []) {
+  async updateTicket(
+    ticketId: string,
+    dto: UpdateTicketDto,
+    currentUser: AuthenticatedUser,
+    files: Express.Multer.File[] = [],
+  ) {
     this.logger.log('BE HAPPY');
 
     try {
@@ -200,7 +206,7 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
-        const uploadedAttachments = files.map((file) => `/uploads/tickets/${file.filename}`);
+      const uploadedAttachments = files.map((file) => `/uploads/tickets/${file.filename}`);
 
       const updatableFields: Partial<UpdateTicketDto> = {
         ...dto,
@@ -276,10 +282,20 @@ export class TicketService {
         },
       );
 
+      if (!updatedTicket) {
+        throw new NotFoundException('Ticket not found');
+      }
+
       return {
         success: true,
         message: 'Ticket due date updated successfully',
-        data: updatedTicket,
+        data: {
+          _id: updatedTicket._id,
+          ticketNumber: updatedTicket.ticketNumber,
+          dueDate: updatedTicket.dueDate,
+          updatedAt: updatedTicket.updatedAt,
+          updatedBy: updatedTicket.updatedBy,
+        },
       };
     } catch (err) {
       this.logger.error(
