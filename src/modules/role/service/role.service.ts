@@ -73,17 +73,16 @@ export class RoleService {
     this.logger.debug('..');
 
     try {
+      if (!Types.ObjectId.isValid(roleId)) {
+        throw new BadRequestException('Invalid role id');
+      }
       const role = await this.roleRepository.findById({ id: roleId });
 
       if (!role) {
         // console.log('Role not found: SERVICE: ', roleId);
         this.logger.debug(`Role not found: SERVICE: ${roleId}`);
 
-        return {
-          success: false,
-          message: 'Role not found',
-          data: null,
-        };
+        throw new NotFoundException('Role not found');
       }
 
       // console.log('role: SERVICE: ', role);
