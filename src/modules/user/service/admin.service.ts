@@ -18,13 +18,13 @@ import { UpdateUserDto } from '../dto/admin-update-user.dto';
 import { ResetPasswordDto } from '../dto/admin-reset-password.dto';
 
 @Injectable()
-export class UserService {
+export class AdminService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
   ) { }
 
-  private logger = new Logger(UserService.name);
+  private logger = new Logger(AdminService.name);
 
   async createUser(dto: CreateUserDto, currentUser: AuthenticatedUser) {
     // console.log('SERVICE : user : createUser\n');

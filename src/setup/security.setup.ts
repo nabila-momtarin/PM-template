@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 
 // Rate limiting — uncomment + install express-rate-limit to enable
@@ -28,15 +29,15 @@ export function setupSecurity(app: INestApplication, configService: ConfigServic
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-businessid'],
   });
 
-  // const rateLimitWindowMs = configService.get<number>('RATE_LIMIT_WINDOW_MS') || 15 * 60 * 1000;
-  // const rateLimitMax      = configService.get<number>('RATE_LIMIT_MAX') || 100;
-  // app.use(
-  //   rateLimit({
-  //     windowMs:        Number(rateLimitWindowMs),
-  //     max:             Number(rateLimitMax),
-  //     message:         'Too many requests from this IP, please try again later.',
-  //     standardHeaders: true,
-  //     legacyHeaders:   false,
-  //   }),
-  // );
+  const rateLimitWindowMs = configService.get<number>('RATE_LIMIT_WINDOW_MS') || 15 * 60 * 1000;
+  const rateLimitMax      = configService.get<number>('RATE_LIMIT_MAX') || 100;
+  app.use(
+    rateLimit({
+      windowMs:        Number(rateLimitWindowMs),
+      max:             Number(rateLimitMax),
+      message:         'Too many requests from this IP, please try again later.',
+      standardHeaders: true,
+      legacyHeaders:   false,
+    }),
+  );
 }

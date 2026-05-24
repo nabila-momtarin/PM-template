@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsMongoId, IsOptional, IsString, IsUrl, MinLength } from "class-validator";
+import { Allow, IsArray, IsEnum, IsMongoId, IsOptional, IsString, IsUrl, MinLength } from "class-validator";
 import { TicketPriority, TicketType } from "src/common/enums/ticket.enum";
 
 export class UpdateTicketDto {
@@ -30,10 +30,9 @@ export class UpdateTicketDto {
     projects?: string[];
 
 
-    // @IsOptional()
-    // @IsArray()
-    // @IsUrl({}, { each: true })
-    // attachments?: string[];
+     @Allow()
+     @IsOptional()
+     attachments?: unknown;
 
 
     @IsOptional()

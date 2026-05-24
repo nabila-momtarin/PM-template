@@ -87,14 +87,16 @@ export class TicketController {
   }
 
   @Patch(':id')
+  @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tickets')))
   upadteTicket(
     @Param('id') id: string,
     @Body() dto: UpdateTicketDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     this.logger.debug('CONTROLLER : admin : upadteTicket\n');
 
-    return this.ticketService.updateTicket(id, dto, currentUser);
+    return this.ticketService.updateTicket(id, dto, currentUser, files);
   }
 
   @Patch(':id/due-date')

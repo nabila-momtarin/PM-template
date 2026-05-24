@@ -5,18 +5,18 @@ import { UpdateUserDto } from '../dto/admin-update-user.dto';
 import { ResetPasswordDto } from '../dto/admin-reset-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
-import { UserService } from '../service/admin.service';
+import { AdminService } from '../service/admin.service';
 
 @Controller('/users')
 export class AdminController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly adminService: AdminService) {}
   private logger = new Logger(AdminController.name);
 
   @Post()
   async createUser(@Body() dto: CreateUserDto, @CurrentUser() user: AuthenticatedUser) {
     this.logger.debug('CONTROLLER : admin : createUser\n');
 
-    return this.userService.createUser(dto, user);
+    return this.adminService.createUser(dto, user);
   }
 
   @Get()
@@ -24,21 +24,21 @@ export class AdminController {
 
     this.logger.debug('CONTROLLER : admin : allUsers\n');
 
-    return this.userService.getAllUsers(query);
+    return this.adminService.getAllUsers(query);
   }
 
   @Get(':id')
   async getUserById(@Param('id') id: string) {
     this.logger.debug('CONTROLLER : admin : getUserById\n');
 
-    return this.userService.getAUser(id);
+    return this.adminService.getAUser(id);
   }
 
   @Delete(':id')
   async deleteUser(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     this.logger.debug('CONTROLLER : admin : delete user\n');
 
-    return this.userService.deleteUser(id, user);
+    return this.adminService.deleteUser(id, user);
   }
 
   @Patch(':id')
@@ -46,7 +46,7 @@ export class AdminController {
 
     this.logger.debug('...');
 
-    return this.userService.updateUser(id, dto);
+    return this.adminService.updateUser(id, dto);
   }
 
   @Patch(':id/reset-password')
@@ -54,6 +54,6 @@ export class AdminController {
 
     this.logger.debug('...');
 
-    return this.userService.resetPassword(id, dto);
+    return this.adminService.resetPassword(id, dto);
   }
 }

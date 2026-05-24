@@ -5,7 +5,7 @@ import { User, UserSchema } from './entities/user.schema';
 import { AdminController } from './controllers/admin.controller';
 import { RoleModule } from '../role/role.module';
 import { UserRepository } from './repositroy/user.repository';
-import { UserService } from './service/admin.service';
+import { AdminService } from './service/admin.service';
 import { MyService } from './service/me.service';
 import { MyController } from './controllers/me.controller';
 
@@ -15,7 +15,7 @@ import { MyController } from './controllers/me.controller';
     forwardRef(() => RoleModule),
 ],
   controllers: [AdminController, MyController],
-  providers: [UserRepository, UserService, MyService],
+  providers: [UserRepository, AdminService, MyService],
   exports: [UserRepository],
 })
 export class UserModule {}

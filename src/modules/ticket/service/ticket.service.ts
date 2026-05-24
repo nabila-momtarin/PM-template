@@ -183,7 +183,7 @@ export class TicketService {
     }
   }
 
-  async updateTicket(ticketId: string, dto: UpdateTicketDto, currentUser: AuthenticatedUser) {
+  async updateTicket(ticketId: string, dto: UpdateTicketDto, currentUser: AuthenticatedUser, files: Express.Multer.File[] = []) {
     this.logger.log('BE HAPPY');
 
     try {
@@ -200,8 +200,11 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
+        const uploadedAttachments = files.map((file) => `/uploads/tickets/${file.filename}`);
+
       const updatableFields: Partial<UpdateTicketDto> = {
         ...dto,
+        ...(uploadedAttachments.length > 0 && { attachments: uploadedAttachments }),
         // updatedBy: new Types.ObjectId(currentUser.userId)
         updatedBy: currentUser.userId.toString(),
       };
