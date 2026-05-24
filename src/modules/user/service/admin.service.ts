@@ -22,7 +22,7 @@ export class AdminService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
-  ) { }
+  ) {}
 
   private logger = new Logger(AdminService.name);
 
@@ -72,14 +72,21 @@ export class AdminService {
 
       //Mongoose document theke plain obj banaite to remove password from the response, and also to remove all the mongoose document methods and properties
       //remove password from the response
-      const userObj = newUser.toObject();
-      delete userObj.password;
-      delete userObj.__v; // remove __v field added by mongoose
+      // const userObj = newUser.toObject();
+      // delete userObj.password;
+      // delete userObj.__v; // remove __v field added by mongoose
+
+      const populatedUser: any = await this.userRepository.findById({
+        id: newUser._id.toString(),
+        useLean: true,
+        populate: [{ path: 'role', select: '_id roleName' }],
+        select: '-password -__v -isDeleted -deletedAt -deletedBy',
+      });
 
       return {
         success: true,
         message: 'User created successfully',
-        data: userObj,
+        data: populatedUser,
       };
     } catch (err) {
       this.logger.error('Error in creating user', err instanceof Error ? err.stack : err);
@@ -100,7 +107,14 @@ export class AdminService {
       });
 
       this.logger.log('allUsers: SERVICE: ', allUsers);
-      return allUsers;
+      // return allUsers;
+
+      return {
+        success: true,
+        message: 'Users fetched successfully',
+        data: allUsers.data,
+        pagination: allUsers.pagination,
+      };
     } catch (err) {
       this.logger.error(
         'AdminService.getAllUsers: Error in getting all users',
@@ -137,10 +151,8 @@ export class AdminService {
         data: user,
       };
     } catch (err) {
-      this.logger.error(
-        'AdminService.getAUser: Error in getting a user',
-        err instanceof Error ? err.stack : err,
-      );
+      this.logger.error('AdminService.getAUser: Error in getting a user', err instanceof Error ? err.stack : err);
+      throw err; 
     }
   }
 

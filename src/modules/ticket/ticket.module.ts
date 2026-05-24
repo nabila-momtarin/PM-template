@@ -4,6 +4,7 @@ import {  Ticket, TicketSchema } from './entities/ticket.schema';
 import { TicketController } from './controller/ticket.controller';
 import { TicketService } from './service/ticket.service';
 import { TicketRepository } from './repositroy/ticket.repository';
+import { CounterService } from 'src/common/services/counter.service';
 
 
 @Module({
@@ -13,7 +14,7 @@ import { TicketRepository } from './repositroy/ticket.repository';
     ]),
   ],
   controllers: [ TicketController ],
-  providers: [ TicketService, TicketRepository ],
+  providers: [ TicketService, TicketRepository,  CounterService ],
   exports: [],
 })
 export class TicketModule {} 

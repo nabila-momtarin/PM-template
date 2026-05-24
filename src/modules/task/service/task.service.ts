@@ -15,18 +15,27 @@ import { TaskDueDateUpdateDTO } from '../dto/task-due-date.dto';
 import { TaskQueryDto } from '../dto/task-query.dto';
 
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
+import { CounterService } from 'src/common/services/counter.service';
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly taskRepository: TaskRepository) {}
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly counterService: CounterService,
+  ) {}
 
   private readonly logger = new Logger(TaskService.name);
 
-  private async generateTaskNumber(): Promise<string> {
-    const totalTasks = await this.taskRepository.countDocuments();
+  // private async generateTaskNumber(): Promise<string> {
+  //   const totalTasks = await this.taskRepository.countDocuments();
 
-    return 'TASK-' + (totalTasks + 1);
-  }
+  //   return 'TASK-' + (totalTasks + 1);
+  // }
+
+  private async generateTaskNumber(): Promise<string> {
+  const seq = await this.counterService.generate('taskCounter');
+  return `TASK-${seq}`;
+}
   async createTask(
     dto: CreateTaskDto,
     files: Express.Multer.File[] = [],

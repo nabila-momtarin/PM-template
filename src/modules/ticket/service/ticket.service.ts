@@ -10,18 +10,27 @@ import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
+import { CounterService } from 'src/common/services/counter.service';
 
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) {}
+  constructor(
+    private readonly ticketRepository: TicketRepository,
+    private readonly counterService: CounterService,
+  ) {}
 
   private readonly logger = new Logger(TicketService.name);
 
-  private async generateTicketNumber(): Promise<string> {
-    const totalTickets = await this.ticketRepository.countDocuments();
+  // private async generateTicketNumber(): Promise<string> {
+  //   const totalTickets = await this.ticketRepository.countDocuments();
 
-    return `TKT-${totalTickets + 1}`;
-  }
+  //   return `TKT-${totalTickets + 1}`;
+  // }
+
+  private async generateTicketNumber(): Promise<string> {
+  const seq = await this.counterService.generate('ticketCounter');
+  return `TKT-${seq}`;
+}
 
   async createTicket(
     dto: CreateTicketDto,
@@ -266,7 +275,7 @@ export class TicketService {
       //check the date is not in the past
       if (newDueDate < new Date()) {
         this.logger.error('Due date cannot be in the past');
-        throw new Error('Due date cannot be in the past');
+        throw new BadRequestException('Due date cannot be in the past');
       }
 
       this.logger.log(newDueDate);
@@ -644,7 +653,7 @@ export class TicketService {
         {
           status: 'Closed',
           // updatedBy: currentUser.userId.toString(),
-          updatedBy: new Types.ObjectId(currentUser.userId), 
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
