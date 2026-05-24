@@ -14,9 +14,9 @@ export class UpdateTaskDto {
     @IsString()
     description?: string;
         
-    @IsOptional()
-    @IsEnum(TaskStatus)
-    status?: string;
+    // @IsOptional()
+    // @IsEnum(TaskStatus)
+    // status?: string;
 
     @IsOptional()
     @IsMongoId()

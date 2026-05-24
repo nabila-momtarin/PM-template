@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { TaskService } from '../service/task.service';
@@ -21,6 +22,7 @@ import { TaskQueryDto } from '../dto/task-query.dto';
 
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { createMulterOptions } from 'src/common/upload/multer-options';
+import { JwtAuthGuard } from 'src/infrastructure/auth/guards/jwt-auth.guard';
 
 @Controller('tasks')
 export class TaskController {
@@ -68,14 +70,25 @@ export class TaskController {
     return this.taskService.deleteTask(id, currentUser);
   }
 
-  @Patch(':id')
-  async updateTask(
-    @Param('id') id: string,
-    @Body() dto: UpdateTaskDto,
-    @CurrentUser() currentUser: AuthenticatedUser,
-  ) {
+  @Patch(':id/start')
+  @UseGuards(JwtAuthGuard /* , RbacGuard */)
+  async startTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
     this.logger.debug('..');
-    return this.taskService.updateTask(id, dto, currentUser);
+    return this.taskService.startTask(id, currentUser);
+  }
+
+  @Patch(':id/pause')
+  @UseGuards(JwtAuthGuard /* , RbacGuard */)
+  async pauseTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('..');
+    return this.taskService.pauseTask(id, currentUser);
+  }
+
+  @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard /* , RbacGuard */)
+  async completeTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('..');
+    return this.taskService.completeTask(id, currentUser);
   }
 
   @Patch(':id/due-date')
@@ -87,6 +100,16 @@ export class TaskController {
     this.logger.debug('...');
 
     return this.taskService.TaskDueDateUpdate(id, dto, currentUser);
+  }
+
+  @Patch(':id')
+  async updateTask(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    this.logger.debug('..');
+    return this.taskService.updateTask(id, dto, currentUser);
   }
 
   @Get()
