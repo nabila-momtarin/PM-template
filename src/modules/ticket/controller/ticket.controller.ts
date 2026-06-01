@@ -36,41 +36,57 @@ export class TicketController {
 
     return this.ticketService.getAllTickets(query);
   }
+
+  
   // ── Status shortcut routes MUST stay before @Get(':ticketId') ──
   @Get('open')
   async getOpenTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('Open', query);
   }
 
+
+
   @Get('in-progress')
   async getInProgressTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('In Progress', query);
   }
+
+
 
   @Get('developed')
   async getDevelopedTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('Developed', query);
   }
 
+
+
   @Get('qa-in-progress')
   async getQaInProgressTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('QA In Progress', query);
   }
+
+
 
   @Get('ready-for-release')
   async getReadyForReleaseTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('Ready for Release', query);
   }
 
+
+
   @Get('released')
   async getReleasedTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('Released', query);
   }
 
+
+
   @Get('closed')
   async getClosedTickets(@Query() query: TicketQueryDto) {
     return this.ticketService.getTicketsByStatus('Closed', query);
   }
+
+
   // Keep dynamic route AFTER all static shortcut routes
   @Get(':id')
   getTicketById(@Param('id') id: string) {
@@ -79,12 +95,16 @@ export class TicketController {
     return this.ticketService.getTicketById(id);
   }
 
+
+
   @Delete(':id')
   deleteTicket(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
     this.logger.debug('CONTROLLER : admin : deleteTicket\n');
 
     return this.ticketService.deleteTicket(id, currentUser);
   }
+
+
 
   @Patch(':id')
   @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tickets')))

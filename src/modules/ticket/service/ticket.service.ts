@@ -3,7 +3,7 @@ import { TicketRepository } from '../repositroy/ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketDocument } from '../entities/ticket.schema';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
@@ -11,13 +11,17 @@ import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
 import { CounterService } from 'src/common/services/counter.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Task, TaskDocument } from 'src/modules/task/entities/task.schema';
+import { minsToHHMM, msToHHMM } from 'src/common/utils/time.utils';
 
 @Injectable()
 export class TicketService {
   constructor(
     private readonly ticketRepository: TicketRepository,
     private readonly counterService: CounterService,
-  ) {}
+    @InjectModel(Task.name) private readonly taskModel: Model<TaskDocument>,
+  ) { }
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -28,9 +32,9 @@ export class TicketService {
   // }
 
   private async generateTicketNumber(): Promise<string> {
-  const seq = await this.counterService.generate('ticketCounter');
-  return `TKT-${seq}`;
-}
+    const seq = await this.counterService.generate('ticketCounter');
+    return `TKT-${seq}`;
+  }
 
   async createTicket(
     dto: CreateTicketDto,
@@ -147,10 +151,41 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
+      // ✅ H-04 — aggregate totalEstimatedTime and totalWorkTime from linked tasks
+      const taskAggregates = await this.taskModel.aggregate([
+        { $match: { ticketId: new Types.ObjectId(ticketId), isDeleted: false } },
+        { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: '$_id',
+            estimatedTime: { $first: '$estimatedTime' },
+            workTimeMs: {
+              $sum: {
+                $subtract: [
+                  { $ifNull: ['$worktime.endTime', '$$NOW'] }, // Use current time if endTime is null
+                  '$worktime.startTime',
+                ],
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalEstimatedTime: { $sum: '$estimatedTime' },
+            totalWorkTimeMs: { $sum: '$workTimeMs' },
+          }
+        }
+      ]);
+
       return {
         success: true,
         message: 'Ticket fetched successfully',
-        data: ticket,
+        data: {
+          ...ticket,
+          totalEstimatedTime: taskAggregates[0] ? minsToHHMM(taskAggregates[0].totalEstimatedTime) : '00:00',
+          totalWorkTime: taskAggregates[0] ? msToHHMM(taskAggregates[0].totalWorkTimeMs) : '00:00',
+        },
       };
     } catch (err) {
       this.logger.error(
