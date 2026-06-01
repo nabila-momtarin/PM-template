@@ -18,8 +18,9 @@ import { JwtAuthGuard } from './infrastructure/auth/guards/jwt-auth.guard';
 import { AuthInfrastructureModule } from './infrastructure/auth/auth-infrastructure.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { TaskModule } from './modules/task/task.module';
-import { SeedModule } from './modules/seed/service/seed.module';
-
+import { SeedModule } from './modules/seed/seed.module';
+import { SummaryModule } from './modules/summary/summary.module';
+// import { RbacGuard } from './infrastructure/auth/guards/rbac.guard';
 
 @Module({
   imports: [
@@ -49,7 +50,7 @@ import { SeedModule } from './modules/seed/service/seed.module';
     TicketModule,
     TaskModule,
     SeedModule,
-
+    SummaryModule,
   ],
   controllers: [AppController],
   providers: [
@@ -62,8 +63,9 @@ import { SeedModule } from './modules/seed/service/seed.module';
     // ── Global Interceptors ─────────────────────────────────────────────────
     // Order: logging runs first (wraps the full handler), response wrapping runs inside it.
     // { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
-    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor, },
-    { provide: APP_GUARD, useClass: JwtAuthGuard, },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // { provide: APP_GUARD, useClass: RbacGuard },
   ],
 })
 // export class AppModule implements NestModule {
@@ -71,5 +73,4 @@ import { SeedModule } from './modules/seed/service/seed.module';
 //     consumer.apply(LoggingMiddleware, MetricsMiddleware).forRoutes('*');
 //   }
 // }
-
-export class AppModule { }
+export class AppModule {}
