@@ -5,7 +5,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { CacheModule } from "@nestjs/cache-manager";
 import { Role, RoleSchema } from "src/modules/role/entities/role.schema";
 import { MongooseModule } from "@nestjs/mongoose";
-// import { RbacGuard } from "./guards/rbac.guard";
+import { RbacGuard } from "./guards/rbac.guard";
 
 
 @Module({
@@ -20,8 +20,8 @@ import { MongooseModule } from "@nestjs/mongoose";
     ]),
     ],
     controllers: [],
-    providers: [TokenService, JwtStrategy, /* RbacGuard */],
-    exports: [TokenService, /* RbacGuard */],
+    providers: [TokenService, JwtStrategy, RbacGuard],
+    exports: [TokenService, RbacGuard],
 })
 
 export class AuthInfrastructureModule {}

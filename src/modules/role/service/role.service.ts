@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Cache } from 'cache-manager';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { RoleRepository } from '../repositroy/role.repository';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { RolesQueryDto } from '../dto/getAll-roles.dto';
@@ -6,15 +7,21 @@ import { UpdateRoleDto } from '../dto/update-role.dto';
 import { UserRepository } from 'src/modules/user/repositroy/user.repository';
 import { Types } from 'mongoose';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class RoleService {
   constructor(private readonly roleRepository: RoleRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+     @Inject(CACHE_MANAGER) private cacheManager: Cache, 
   ) { }
 
   private readonly logger = new Logger(RoleService.name);
 
+
+   private async invalidateRoleCache(roleId: string): Promise<void> {
+    await this.cacheManager.del(`role:${roleId}`);
+  }
   async createRole(createRoleDto: CreateRoleDto) {
     // console.log('SERVICE: Creating a new role\n');
     this.logger.debug('..');
@@ -145,6 +152,8 @@ export class RoleService {
       if (!deletedRole) {
         throw new NotFoundException('Role not found');
       }
+
+       await this.invalidateRoleCache(roleId); 
       // console.log('deletedRole: SERVICE: ', deletedRole);
       this.logger.debug(`Deleted Role: SERVICE: ${deletedRole}`);
 
@@ -182,6 +191,8 @@ export class RoleService {
       }
 
       const updatedRole = await this.roleRepository.updateByID(roleId, updateRoleDto);
+
+       await this.invalidateRoleCache(roleId); 
 
       // console.log('updatedRole: SERVICE: ', updatedRole);
       this.logger.debug(`Updated Role: SERVICE: ${updatedRole}`);

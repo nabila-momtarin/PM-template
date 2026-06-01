@@ -20,10 +20,22 @@ import { TicketModule } from './modules/ticket/ticket.module';
 import { TaskModule } from './modules/task/task.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { SummaryModule } from './modules/summary/summary.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { RbacGuard } from './infrastructure/auth/guards/rbac.guard';
+import { Role, RoleSchema } from './modules/role/entities/role.schema';
+import { MongooseModule } from '@nestjs/mongoose';
 // import { RbacGuard } from './infrastructure/auth/guards/rbac.guard';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true,    // ← সব module এ available
+      ttl: 300,          // ← 5 minutes (seconds)
+      max: 100,          // ← maximum 100 items
+    }),
+    MongooseModule.forFeature([
+      { name: Role.name, schema: RoleSchema },  // ← add
+    ]),
     // ── Configuration ──────────────────────────────────────────────────────
     ConfigModule.forRoot({
       load: [configuration],
@@ -65,7 +77,7 @@ import { SummaryModule } from './modules/summary/summary.module';
     // { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    // { provide: APP_GUARD, useClass: RbacGuard },
+    { provide: APP_GUARD, useClass: RbacGuard },  
   ],
 })
 // export class AppModule implements NestModule {
