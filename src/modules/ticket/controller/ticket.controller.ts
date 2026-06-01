@@ -37,7 +37,7 @@ export class TicketController {
     return this.ticketService.getAllTickets(query);
   }
 
-  
+
   // ── Status shortcut routes MUST stay before @Get(':ticketId') ──
   @Get('open')
   async getOpenTickets(@Query() query: TicketQueryDto) {
@@ -106,18 +106,7 @@ export class TicketController {
 
 
 
-  @Patch(':id')
-  @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tickets')))
-  upadteTicket(
-    @Param('id') id: string,
-    @Body() dto: UpdateTicketDto,
-    @UploadedFiles() files: Express.Multer.File[],
-    @CurrentUser() currentUser: AuthenticatedUser,
-  ) {
-    this.logger.debug('CONTROLLER : admin : upadteTicket\n');
 
-    return this.ticketService.updateTicket(id, dto, currentUser, files);
-  }
 
   @Patch(':id/due-date')
   updateTicketDueDate(
@@ -181,5 +170,18 @@ export class TicketController {
     this.logger.debug('KEEP GOING\n');
 
     return this.ticketService.updateTicketToClosed(id, currentUser);
+  }
+
+    @Patch(':id')
+  @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tickets')))
+  upadteTicket(
+    @Param('id') id: string,
+    @Body() dto: UpdateTicketDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    this.logger.debug('CONTROLLER : admin : upadteTicket\n');
+
+    return this.ticketService.updateTicket(id, dto, currentUser, files);
   }
 }

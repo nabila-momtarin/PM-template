@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './infrastructure/auth/guards/jwt-auth.guard';
 import { AuthInfrastructureModule } from './infrastructure/auth/auth-infrastructure.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { TaskModule } from './modules/task/task.module';
+import { SeedModule } from './modules/seed/service/seed.module';
 
 
 @Module({
@@ -47,6 +48,7 @@ import { TaskModule } from './modules/task/task.module';
     AuthInfrastructureModule,
     TicketModule,
     TaskModule,
+    SeedModule,
 
   ],
   controllers: [AppController],

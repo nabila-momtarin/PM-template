@@ -171,8 +171,7 @@ export class AdminService {
       // }
 
       if (new Types.ObjectId(id).toString() === new Types.ObjectId(currentUser.userId).toString())
-  throw new BadRequestException('You cannot delete your own account');
-
+        throw new BadRequestException('You cannot delete your own account');
 
       const deletedUser = await this.userRepository.softDeleteById(
         id,
