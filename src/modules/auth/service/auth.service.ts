@@ -50,7 +50,7 @@ export class AuthService {
         roleId: role._id.toString(),
       });
 
-      this.logger.debug(`Access Token : ${accessToken}`);
+      // this.logger.debug(`Access Token : ${accessToken}`);
 
       const { password: _password, ...safeUser } = user;
 

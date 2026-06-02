@@ -13,13 +13,13 @@ export class ProjectService {
 
   private readonly logger = new Logger(ProjectService.name);
 
-  async create(createProjectDto: CreateProjectDto) /* : Promise<ProjectDocument>  */ {
+  async create(createProjectDto: CreateProjectDto, currentUser: AuthenticatedUser) /* : Promise<ProjectDocument>  */ {
     this.logger.debug('..');
 
     try {
       const newProject = await this.projectRepository.createOne({
         ...createProjectDto,
-        // createdBy: userId,
+        createdBy: new Types.ObjectId(currentUser.userId),
       });
 
       // console.log('newProject: SERVICE: ', newProject);
@@ -58,7 +58,7 @@ export class ProjectService {
 
       return {
         success: true,
-        message: 'Project fetched successfully',
+        message: 'Projects fetched successfully',
         data: projects.data,
         pagination: projects.pagination
       };
@@ -104,7 +104,7 @@ export class ProjectService {
 
       return {
         success: true,
-        message: 'Project fetched successfully',
+        message: 'Projects fetched successfully',
         data: project,
       };
     } catch (err) {

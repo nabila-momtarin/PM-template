@@ -1,7 +1,7 @@
 import { PermissionCatalog } from '../types/permissions.type';
 
 export const PERMISSIONS: PermissionCatalog = [
-  // ── Tickets: 10 ─────────────────────────────────────────────
+  // ── Tickets: 20 ─────────────────────────────────────────────
   {
     method: 'GET',
     path: '/api/v1/tickets',
@@ -15,65 +15,125 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Tickets',
   },
   {
-    method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId',
-    label: 'Edit ticket',
+    method: 'GET',
+    path: '/api/v1/tickets/open',
+    label: 'View open tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/in-progress',
+    label: 'View in-progress tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/developed',
+    label: 'View developed tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/qa-in-progress',
+    label: 'View QA in-progress tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/ready-for-release',
+    label: 'View ready-for-release tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/released',
+    label: 'View released tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/closed',
+    label: 'View closed tickets',
+    category: 'Tickets',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tickets/:id',
+    label: 'View ticket details',
     category: 'Tickets',
   },
   {
     method: 'DELETE',
-    path: '/api/v1/tickets/:ticketId',
+    path: '/api/v1/tickets/:id',
     label: 'Delete ticket',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/in-progress',
+    path: '/api/v1/tickets/:id',
+    label: 'Edit ticket',
+    category: 'Tickets',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tickets/:id/due-date',
+    label: 'Update ticket due date',
+    category: 'Tickets',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tickets/:id/change-qa-status',
+    label: 'Change ticket QA status',
+    category: 'Tickets',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tickets/:id/change-status/in-progress',
     label: 'Move ticket to In Progress',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/developed',
+    path: '/api/v1/tickets/:id/change-status/developed',
     label: 'Move ticket to Developed',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/qa-in-progress',
+    path: '/api/v1/tickets/:id/change-status/qa-in-progress',
     label: 'Move ticket to QA In Progress',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/ready-for-release',
+    path: '/api/v1/tickets/:id/change-status/ready-for-release',
     label: 'Move ticket to Ready for Release',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/released',
+    path: '/api/v1/tickets/:id/change-status/released',
     label: 'Move ticket to Released',
     category: 'Tickets',
   },
   {
     method: 'PATCH',
-    path: '/api/v1/tickets/:ticketId/change-status/closed',
+    path: '/api/v1/tickets/:id/change-status/closed',
     label: 'Move ticket to Closed',
     category: 'Tickets',
   },
 
   // ── Projects: 5 ────────────────────────────────────────────
   {
-    method: 'GET',
-    path: '/api/v1/projects',
-    label: 'View projects',
-    category: 'Projects',
-  },
-  {
     method: 'POST',
     path: '/api/v1/projects',
     label: 'Create project',
+    category: 'Projects',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/projects',
+    label: 'View projects',
     category: 'Projects',
   },
   {
@@ -83,25 +143,19 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Projects',
   },
   {
-    method: 'PATCH',
-    path: '/api/v1/projects/:projectId',
-    label: 'Edit project',
-    category: 'Projects',
-  },
-  {
     method: 'DELETE',
     path: '/api/v1/projects/:projectId',
     label: 'Delete project',
     category: 'Projects',
   },
-
-  // ── Tasks: 4 ───────────────────────────────────────────────
   {
-    method: 'GET',
-    path: '/api/v1/tasks',
-    label: 'View tasks',
-    category: 'Tasks',
+    method: 'PATCH',
+    path: '/api/v1/projects/:projectId',
+    label: 'Edit project',
+    category: 'Projects',
   },
+
+  // ── Tasks: 9 ───────────────────────────────────────────────
   {
     method: 'POST',
     path: '/api/v1/tasks',
@@ -109,24 +163,73 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Tasks',
   },
   {
-    method: 'PATCH',
-    path: '/api/v1/tasks/:taskId',
-    label: 'Edit task',
+    method: 'GET',
+    path: '/api/v1/tasks/todo',
+    label: 'View todo tasks',
+    category: 'Tasks',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tasks/in-progress',
+    label: 'View in-progress tasks',
+    category: 'Tasks',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tasks/completed',
+    label: 'View completed tasks',
+    category: 'Tasks',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/tasks/:id',
+    label: 'View task details',
     category: 'Tasks',
   },
   {
     method: 'DELETE',
-    path: '/api/v1/tasks/:taskId',
+    path: '/api/v1/tasks/:id',
     label: 'Delete task',
     category: 'Tasks',
   },
-  // ── Admin: 4 ──────────────────────────────────────
+  {
+    method: 'PATCH',
+    path: '/api/v1/tasks/:id',
+    label: 'Edit task',
+    category: 'Tasks',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tasks/:id/due-date',
+    label: 'Update task due date',
+    category: 'Tasks',
+  },
+  {
+  method: 'PATCH',
+  path: '/api/v1/tasks/:id/start',
+  label: 'Start task timer',
+  category: 'Tasks',
+},
+{
+  method: 'PATCH',
+  path: '/api/v1/tasks/:id/pause',
+  label: 'Pause task timer',
+  category: 'Tasks',
+},
+{
+  method: 'PATCH',
+  path: '/api/v1/tasks/:id/complete',
+  label: 'Complete task',
+  category: 'Tasks',
+},
   {
     method: 'GET',
-    path: '/api/v1/users',
-    label: 'View users',
-    category: 'Admin',
+    path: '/api/v1/tasks',
+    label: 'View tasks',
+    category: 'Tasks',
   },
+
+  // ── Admin / Users: 5 ───────────────────────────────────────
   {
     method: 'POST',
     path: '/api/v1/users',
@@ -134,19 +237,37 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Admin',
   },
   {
-    method: 'PATCH',
-    path: '/api/v1/users/:userId/reset-password',
-    label: 'Reset user password',
+    method: 'GET',
+    path: '/api/v1/users',
+    label: 'View users',
+    category: 'Admin',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/users/:id',
+    label: 'View user details',
     category: 'Admin',
   },
   {
     method: 'DELETE',
-    path: '/api/v1/users/:userId',
+    path: '/api/v1/users/:id',
     label: 'Delete user',
     category: 'Admin',
   },
+  {
+    method: 'PATCH',
+    path: '/api/v1/users/:id/reset-password',
+    label: 'Reset user password',
+    category: 'Admin',
+  },
 
-  // ── Role: 3 ────────────────────────────────────────────
+  // ── Roles: 5 ───────────────────────────────────────────────
+  {
+    method: 'POST',
+    path: '/api/v1/roles',
+    label: 'Create role',
+    category: 'Role',
+  },
   {
     method: 'GET',
     path: '/api/v1/roles',
@@ -154,9 +275,15 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Role',
   },
   {
-    method: 'POST',
-    path: '/api/v1/roles',
-    label: 'Create role',
+    method: 'GET',
+    path: '/api/v1/roles/:roleId',
+    label: 'View role details',
+    category: 'Role',
+  },
+  {
+    method: 'DELETE',
+    path: '/api/v1/roles/:roleId',
+    label: 'Delete role',
     category: 'Role',
   },
   {

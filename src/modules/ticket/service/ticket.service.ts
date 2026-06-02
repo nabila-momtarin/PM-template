@@ -3,27 +3,44 @@ import { TicketRepository } from '../repositroy/ticket.repository';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { CreateTicketDto } from '../dto/create-ticket.dto';
 import { TicketDocument } from '../entities/ticket.schema';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { TicketQueryDto } from '../dto/ticket-query.dto';
 import { UpdateTicketDto } from '../dto/update-ticket.dto';
 import { UpdateTickeDueDatetDto } from '../dto/update-ticket-due-date-.dto';
 import { UpdateTicketQaStatusDto } from '../dto/update-ticket-qa-status.dto';
 
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
+import { CounterService } from 'src/common/services/counter.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Task, TaskDocument } from 'src/modules/task/entities/task.schema';
+import { minsToHHMM, msToHHMM } from 'src/common/utils/time.utils';
 
 @Injectable()
 export class TicketService {
-  constructor(private readonly ticketRepository: TicketRepository) { }
+  constructor(
+    private readonly ticketRepository: TicketRepository,
+    private readonly counterService: CounterService,
+    @InjectModel(Task.name) private readonly taskModel: Model<TaskDocument>,
+  ) { }
 
   private readonly logger = new Logger(TicketService.name);
 
-  private async generateTicketNumber(): Promise<string> {
-    const totalTickets = await this.ticketRepository.countDocuments();
+  // private async generateTicketNumber(): Promise<string> {
+  //   const totalTickets = await this.ticketRepository.countDocuments();
 
-    return `TKT-${totalTickets + 1}`;
+  //   return `TKT-${totalTickets + 1}`;
+  // }
+
+  private async generateTicketNumber(): Promise<string> {
+    const seq = await this.counterService.generate('ticketCounter');
+    return `TKT-${seq}`;
   }
 
-  async createTicket(dto: CreateTicketDto, files: Express.Multer.File[] = [], currentUser: AuthenticatedUser) {
+  async createTicket(
+    dto: CreateTicketDto,
+    files: Express.Multer.File[] = [],
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('SERVICE: ticket : createTicket');
 
     try {
@@ -97,9 +114,7 @@ export class TicketService {
     }
   }
 
-
   //all status tickets
-
 
   async getTicketsByStatus(status: string, query: TicketQueryDto) {
     this.logger.log(`SERVICE: ticket : getTicketsByStatus -> ${status}`);
@@ -112,7 +127,6 @@ export class TicketService {
     });
   }
 
-  
   async getTicketById(ticketId: string) {
     this.logger.log('SERVICE: ticket : getTicketById');
 
@@ -137,10 +151,41 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
+      // ✅ H-04 — aggregate totalEstimatedTime and totalWorkTime from linked tasks
+      const taskAggregates = await this.taskModel.aggregate([
+        { $match: { ticketId: new Types.ObjectId(ticketId), isDeleted: false } },
+        { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: '$_id',
+            estimatedTime: { $first: '$estimatedTime' },
+            workTimeMs: {
+              $sum: {
+                $subtract: [
+                  { $ifNull: ['$worktime.endTime', '$$NOW'] }, // Use current time if endTime is null
+                  '$worktime.startTime',
+                ],
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalEstimatedTime: { $sum: '$estimatedTime' },
+            totalWorkTimeMs: { $sum: '$workTimeMs' },
+          }
+        }
+      ]);
+
       return {
         success: true,
         message: 'Ticket fetched successfully',
-        data: ticket,
+        data: {
+          ...ticket,
+          totalEstimatedTime: taskAggregates[0] ? minsToHHMM(taskAggregates[0].totalEstimatedTime) : '00:00',
+          totalWorkTime: taskAggregates[0] ? msToHHMM(taskAggregates[0].totalWorkTimeMs) : '00:00',
+        },
       };
     } catch (err) {
       this.logger.error(
@@ -173,6 +218,7 @@ export class TicketService {
       return {
         success: true,
         message: 'Ticket deleted successfully',
+        data: null,
       };
     } catch (err) {
       this.logger.error(
@@ -183,7 +229,12 @@ export class TicketService {
     }
   }
 
-  async updateTicket(ticketId: string, dto: UpdateTicketDto, currentUser: AuthenticatedUser) {
+  async updateTicket(
+    ticketId: string,
+    dto: UpdateTicketDto,
+    currentUser: AuthenticatedUser,
+    files: Express.Multer.File[] = [],
+  ) {
     this.logger.log('BE HAPPY');
 
     try {
@@ -200,9 +251,12 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
+      const uploadedAttachments = files.map((file) => `/uploads/tickets/${file.filename}`);
+
       const updatableFields: Partial<UpdateTicketDto> = {
         ...dto,
-        // updatedBy: new Types.ObjectId(currentUser.userId)
+        ...(uploadedAttachments.length > 0 && { attachments: uploadedAttachments }),
+        // updatedBy: new Types.ObjectId(currentUser.userId),
         updatedBy: currentUser.userId.toString(),
       };
 
@@ -256,7 +310,7 @@ export class TicketService {
       //check the date is not in the past
       if (newDueDate < new Date()) {
         this.logger.error('Due date cannot be in the past');
-        throw new Error('Due date cannot be in the past');
+        throw new BadRequestException('Due date cannot be in the past');
       }
 
       this.logger.log(newDueDate);
@@ -265,7 +319,7 @@ export class TicketService {
         ticketId,
         {
           dueDate: newDueDate,
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -273,10 +327,20 @@ export class TicketService {
         },
       );
 
+      if (!updatedTicket) {
+        throw new NotFoundException('Ticket not found');
+      }
+
       return {
         success: true,
         message: 'Ticket due date updated successfully',
-        data: updatedTicket,
+        data: {
+          _id: updatedTicket._id,
+          ticketNumber: updatedTicket.ticketNumber,
+          dueDate: updatedTicket.dueDate,
+          updatedAt: updatedTicket.updatedAt,
+          updatedBy: updatedTicket.updatedBy,
+        },
       };
     } catch (err) {
       this.logger.error(
@@ -311,7 +375,7 @@ export class TicketService {
         ticketId,
         {
           qaStatus: dto.qaStatus,
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           // useLean: true,
@@ -363,7 +427,7 @@ export class TicketService {
         ticketId,
         {
           status: 'In Progress',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -378,7 +442,7 @@ export class TicketService {
       this.logger.log(updatedTicketInProgress);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to In Progress',
         data: {
           _id: updatedTicketInProgress._id,
           ticketNumber: updatedTicketInProgress.ticketNumber,
@@ -415,7 +479,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Developed',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -430,7 +494,7 @@ export class TicketService {
       this.logger.log(updatedTicketDeveloped);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Developed',
         data: {
           _id: updatedTicketDeveloped._id,
           ticketNumber: updatedTicketDeveloped.ticketNumber,
@@ -467,7 +531,7 @@ export class TicketService {
         ticketId,
         {
           status: 'QA In Progress',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -482,7 +546,7 @@ export class TicketService {
       this.logger.log(updatedTicketQaInProgress);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to QA In Progress',
         data: {
           _id: updatedTicketQaInProgress._id,
           ticketNumber: updatedTicketQaInProgress.ticketNumber,
@@ -519,7 +583,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Ready for Release',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -534,7 +598,7 @@ export class TicketService {
       this.logger.log(updatedTicketReadyForRelease);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Ready for Release',
         data: {
           _id: updatedTicketReadyForRelease._id,
           ticketNumber: updatedTicketReadyForRelease.ticketNumber,
@@ -571,7 +635,7 @@ export class TicketService {
         ticketId,
         {
           status: 'Released',
-          updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -586,7 +650,7 @@ export class TicketService {
       this.logger.log(updatedTicketReleased);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Released',
         data: {
           _id: updatedTicketReleased._id,
           ticketNumber: updatedTicketReleased.ticketNumber,
@@ -623,7 +687,8 @@ export class TicketService {
         ticketId,
         {
           status: 'Closed',
-          updatedBy: currentUser.userId.toString(),
+          // updatedBy: currentUser.userId.toString(),
+          updatedBy: new Types.ObjectId(currentUser.userId),
         },
         {
           useLean: true,
@@ -638,7 +703,7 @@ export class TicketService {
       this.logger.log(updatedTicketClosed);
       return {
         success: true,
-        message: 'Ticket status updated successfully',
+        message: 'Ticket status updated to Closed',
         data: {
           _id: updatedTicketClosed._id,
           ticketNumber: updatedTicketClosed.ticketNumber,

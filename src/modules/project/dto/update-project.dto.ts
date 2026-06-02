@@ -17,5 +17,5 @@ export class UpdateProjectDto {
  
     @IsOptional()
     @IsString()
-    repositoryUrl?: string;
+    repositoryURL?: string;
 }

@@ -5,6 +5,10 @@ import { Public } from "src/infrastructure/auth/decorators/public.decorator";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "src/infrastructure/auth/types/auth.types";
 
+import { HttpCode } from "@nestjs/common";
+
+
+
 @Controller('login')
 export class AuthController {
     constructor(
@@ -15,6 +19,7 @@ export class AuthController {
     private logger = new Logger(AuthController.name);
 
     @Public()
+    @HttpCode(200) 
     @Post()
     login(@Body() dto: LoginDto) {
         this.logger.log('CONTROLLER : login\n');

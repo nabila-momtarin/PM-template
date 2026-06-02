@@ -70,26 +70,27 @@ export class TaskController {
     return this.taskService.deleteTask(id, currentUser);
   }
 
-  @Patch(':id/start')
-  @UseGuards(JwtAuthGuard /* , RbacGuard */)
-  async startTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-    this.logger.debug('..');
-    return this.taskService.startTask(id, currentUser);
-  }
+@Patch(':id/start')
+// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+async startTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+  this.logger.debug('..');
+  console.log('>>> START HIT, currentUser:', currentUser);
+  return this.taskService.startTask(id, currentUser);
+}
 
-  @Patch(':id/pause')
-  @UseGuards(JwtAuthGuard /* , RbacGuard */)
-  async pauseTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-    this.logger.debug('..');
-    return this.taskService.pauseTask(id, currentUser);
-  }
+@Patch(':id/pause')
+// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+async pauseTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+  this.logger.debug('..');
+  return this.taskService.pauseTask(id, currentUser);
+}
 
-  @Patch(':id/complete')
-  @UseGuards(JwtAuthGuard /* , RbacGuard */)
-  async completeTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-    this.logger.debug('..');
-    return this.taskService.completeTask(id, currentUser);
-  }
+@Patch(':id/complete')
+// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+async completeTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+  this.logger.debug('..');
+  return this.taskService.completeTask(id, currentUser);
+}
 
   @Patch(':id/due-date')
   dueDateUpdateTask(

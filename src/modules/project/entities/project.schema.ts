@@ -22,7 +22,7 @@ export class Project {
     @Prop({ type: Types.ObjectId, required: true})
     createdBy?: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, required: true})
+    @Prop({ type: Types.ObjectId, /* required: true */})
     updatedBy?: Types.ObjectId;
 
     @Prop({ type: Boolean, default: false })

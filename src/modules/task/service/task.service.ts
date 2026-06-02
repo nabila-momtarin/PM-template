@@ -15,18 +15,27 @@ import { TaskDueDateUpdateDTO } from '../dto/task-due-date.dto';
 import { TaskQueryDto } from '../dto/task-query.dto';
 
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
+import { CounterService } from 'src/common/services/counter.service';
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly taskRepository: TaskRepository) {}
+  constructor(
+    private readonly taskRepository: TaskRepository,
+    private readonly counterService: CounterService,
+  ) {}
 
   private readonly logger = new Logger(TaskService.name);
 
-  private async generateTaskNumber(): Promise<string> {
-    const totalTasks = await this.taskRepository.countDocuments();
+  // private async generateTaskNumber(): Promise<string> {
+  //   const totalTasks = await this.taskRepository.countDocuments();
 
-    return 'TASK-' + (totalTasks + 1);
-  }
+  //   return 'TASK-' + (totalTasks + 1);
+  // }
+
+  private async generateTaskNumber(): Promise<string> {
+  const seq = await this.counterService.generate('taskCounter');
+  return `TASK-${seq}`;
+}
   async createTask(
     dto: CreateTaskDto,
     files: Express.Multer.File[] = [],
@@ -295,110 +304,124 @@ export class TaskService {
   // START  (Todo → In Progress)
   // ──────────────────────────────────────────
   async startTask(id: string, currentUser: AuthenticatedUser) {
-    const task = await this.taskRepository.findById({ id });
-    if (!task) throw new NotFoundException('Task not found');
+  const task = await this.taskRepository.findById({ id });
+  if (!task) throw new NotFoundException('Task not found');
 
-    // Only the assignee can start their own task
-    if (task.assignee.toString() !== currentUser.userId)
-      throw new ForbiddenException('Only the assigned user can start this task');
+  console.log('assignee raw:', task.assignee);
+  console.log('assignee toString:', task.assignee?.toString());
+  console.log('currentUser.userId:', currentUser.userId);
+  console.log('match?', task.assignee?.toString() === currentUser.userId);
 
-    if (task.status === 'Completed')
-      throw new BadRequestException('Completed tasks cannot be reopened');
-    if (task.status === 'In Progress') throw new BadRequestException('Task is already In Progress');
+  
+  if (task.assignee.toString() !== currentUser.userId)
+    throw new ForbiddenException('Only the assigned user can start this task');
 
-    // Single in-progress constraint — user can only track one task at a time
-    const conflict = await this.taskRepository.findOne({
-      filters: {
-        assignee: task.assignee,
-        status: 'In Progress',
-        _id: { $ne: id },
-        isDeleted: false,
-      },
-    });
-    if (conflict)
-      throw new BadRequestException(
-        'You already have a task In Progress. Pause it before starting another.',
-      );
+  if (task.status === 'Completed')
+    throw new BadRequestException('Completed tasks cannot be reopened');
+  if (task.status === 'In Progress')
+    throw new BadRequestException('Task is already In Progress');
 
-    // Push open worktime entry + flip status atomically
-    const updated = await this.taskRepository.updateOne(
-      { _id: id },
-      {
-        $set: {
-          status: 'In Progress',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        $push: { worktime: { startTime: new Date(), endTime: null } },
-      },
-      { new: true },
+  const conflict = await this.taskRepository.findOne({
+    filters: {
+      assignee: task.assignee,
+      status: 'In Progress',
+      _id: { $ne: id },
+      isDeleted: false,
+    },
+  });
+  if (conflict)
+    throw new BadRequestException(
+      'You already have a task In Progress. Pause it before starting another.',
     );
 
-    return { success: true, message: 'Task started successfully', data: updated };
-  }
+  const updated = await this.taskRepository.updateOne(
+    { _id: id },
+    {
+      $set: {
+        status: 'In Progress',
+        updatedBy: new Types.ObjectId(currentUser.userId),
+      },
+      $push: { worktime: { startTime: new Date(), endTime: null } },
+    },
+  );
+
+  console.log('startTask updated result:', JSON.stringify(updated)); 
+
+  return { success: true, message: 'Task started successfully', data: updated };
+}
 
   // ──────────────────────────────────────────
   // PAUSE  (In Progress → Todo)
   // ──────────────────────────────────────────
-  async pauseTask(id: string, currentUser: AuthenticatedUser) {
-    const task = await this.taskRepository.findById({ id });
-    if (!task) throw new NotFoundException('Task not found');
+ async pauseTask(id: string, currentUser: AuthenticatedUser) {
+  const task = await this.taskRepository.findById({ id });
+  if (!task) throw new NotFoundException('Task not found');
 
-    if (task.status !== 'In Progress')
-      throw new BadRequestException('Task is not currently In Progress');
+  if (task.status !== 'In Progress')
+    throw new BadRequestException('Task is not currently In Progress');
 
-    // Seal the open worktime entry using MongoDB positional operator
-    const updated = await this.taskRepository.updateOne(
-      { _id: id, 'worktime.endTime': null },
-      {
-        $set: {
-          status: 'Todo',
-          'worktime.$.endTime': new Date(), // ← seals the open entry
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-      },
-      { new: true },
-    );
+ // pauseTask — replace the filter:
+const updated = await this.taskRepository.updateOne(
+  { _id: id, 'worktime.endTime': { $in: [null, undefined] } },  // ← handles both
+  {
+    $set: {
+      status: 'Todo',
+      'worktime.$.endTime': new Date(),
+      updatedBy: new Types.ObjectId(currentUser.userId),
+    },
+  },
+);
 
-    return { success: true, message: 'Task paused successfully', data: updated };
-  }
+  return { success: true, message: 'Task paused successfully', data: updated };
+}
 
   // ──────────────────────────────────────────
   // COMPLETE  (In Progress | Todo → Completed)
   // ──────────────────────────────────────────
-  async completeTask(id: string, currentUser: AuthenticatedUser) {
-    const task = await this.taskRepository.findById({ id });
-    if (!task) throw new NotFoundException('Task not found');
+async completeTask(id: string, currentUser: AuthenticatedUser) {
+  const task = await this.taskRepository.findById({ id });
+  if (!task) throw new NotFoundException('Task not found');
 
-    if (task.status === 'Completed') throw new BadRequestException('Task is already completed');
+  if (task.status === 'Completed')
+    throw new BadRequestException('Task is already completed');
 
-    // Completing from Todo only allowed if at least one session exists
-    if (task.status === 'Todo' && task.worktime.length === 0)
-      throw new BadRequestException('Start the task before completing it.');
+  if (task.status === 'Todo' && task.worktime.length === 0)
+    throw new BadRequestException('Start the task before completing it.');
 
-    const now = new Date();
-    const updateQuery: any = {
-      $set: {
-        status: 'Completed',
-        completionDate: now,
-        updatedBy: new Types.ObjectId(currentUser.userId),
+  const now = new Date();
+
+  if (task.status === 'In Progress') {
+    // Seal open entry AND mark completed in ONE atomic operation
+    const updated = await this.taskRepository.updateOne(
+      { _id: id, 'worktime.endTime': null },
+      {
+        $set: {
+          status: 'Completed',
+          completionDate: now,
+          'worktime.$.endTime': now,          // ← seal the open entry
+          updatedBy: new Types.ObjectId(currentUser.userId),
+        },
       },
-    };
-
-    // If running right now — seal the open entry in the same atomic update
-    if (task.status === 'In Progress') {
-      updateQuery.$set['worktime.$.endTime'] = now;
-      const updated = await this.taskRepository.updateOne(
-        { _id: id, 'worktime.endTime': null },
-        updateQuery,
-        { new: true },
-      );
-      return { success: true, message: 'Task completed successfully', data: updated };
-    }
-
-    // Todo → Completed (all sessions already sealed)
-    const updated = await this.taskRepository.updateByID(id, updateQuery.$set, { new: true });
+    );
     return { success: true, message: 'Task completed successfully', data: updated };
   }
+
+  // Todo → Completed (sessions already sealed, just close out)
+// completeTask In Progress branch — same fix:
+const updated = await this.taskRepository.updateOne(
+  { _id: id, 'worktime.endTime': { $in: [null, undefined] } },  // ← handles both
+  {
+    $set: {
+      status: 'Completed',
+      completionDate: now,
+      'worktime.$.endTime': now,
+      updatedBy: new Types.ObjectId(currentUser.userId),
+    },
+  },
+);
+
+  return { success: true, message: 'Task completed successfully', data: updated };
+}
 
   async TaskDueDateUpdate(id: string, dto: TaskDueDateUpdateDTO, currentUser: AuthenticatedUser) {
     this.logger.log('...');

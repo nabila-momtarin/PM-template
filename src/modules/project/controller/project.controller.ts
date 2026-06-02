@@ -14,12 +14,11 @@ export class ProjectController {
 
 
   @Post()
-  async create(@Body() createProjectDto: CreateProjectDto /* , userId: string */) {
+  async create(@Body() createProjectDto: CreateProjectDto , @CurrentUser() currentUser: AuthenticatedUser) {
 
     this.logger.log('..');
 
-    const project = await this.projectService.create(createProjectDto /* , userId */);
-
+    const project = await this.projectService.create(createProjectDto, currentUser);
     return project;
   }
 
