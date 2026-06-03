@@ -12,32 +12,38 @@ export function setupSecurity(app: INestApplication, configService: ConfigServic
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc:   ["'self'", "'unsafe-inline'"],
-          scriptSrc:  ["'self'"],
-          imgSrc:     ["'self'", 'data:', 'https:'],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
         },
       },
       crossOriginEmbedderPolicy: false,
     }),
   );
 
+  //cors configuration
+  // const rawOrigin = configService.get<string>('corsOrigin') ?? 'http://localhost:3000';
+
+  // // Support comma-separated list: "http://localhost:3000,https://app.example.com"
+  // const allowedOrigins = rawOrigin.split(',').map((o) => o.trim());
+  
   const corsOrigin = configService.get<string>('CORS_ORIGIN') || '*';
   app.enableCors({
-    origin:         corsOrigin,
-    credentials:    true,
-    methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    origin: corsOrigin,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-businessid'],
   });
 
   const rateLimitWindowMs = configService.get<number>('RATE_LIMIT_WINDOW_MS') || 15 * 60 * 1000;
-  const rateLimitMax      = configService.get<number>('RATE_LIMIT_MAX') || 100;
+  const rateLimitMax = configService.get<number>('RATE_LIMIT_MAX') || 100;
   app.use(
     rateLimit({
-      windowMs:        Number(rateLimitWindowMs),
-      max:             Number(rateLimitMax),
-      message:         'Too many requests from this IP, please try again later.',
+      windowMs: Number(rateLimitWindowMs),
+      max: Number(rateLimitMax),
+      message: 'Too many requests from this IP, please try again later.',
       standardHeaders: true,
-      legacyHeaders:   false,
+      legacyHeaders: false,
     }),
   );
 }
