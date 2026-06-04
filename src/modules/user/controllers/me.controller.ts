@@ -10,7 +10,6 @@ import { SkipRbac } from 'src/infrastructure/auth/decorators/skip-rbac.decorator
 import { MyPriorityService } from '../service/my-priority.service';
 import { MyPriorityQueryDto } from '../dto/my-priority.dto';
 
-
 @Controller('me')
 export class MyController {
   constructor(
@@ -47,13 +46,15 @@ export class MyController {
     }
   }
 
-
   @SkipRbac()
   @Get('my-priority-tasks')
   getMyPriorityTasks(@CurrentUser() me: AuthenticatedUser, @Query() query: MyPriorityQueryDto) {
     return this.myPriorityService.getMyPriorityTasks(me, query);
   }
 
-
+  @SkipRbac()
+  @Get('my-priority-tickets')
+  getMyPriorityTickets(@CurrentUser() user: AuthenticatedUser, @Query() query: MyPriorityQueryDto) {
+    return this.myPriorityService.getMyPriorityTickets(user, query);
+  }
 }
-
