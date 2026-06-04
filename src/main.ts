@@ -42,6 +42,8 @@ async function bootstrap() {
 
 
     await app.listen(port);
+
+    logger.log(`Server running on ${port} \n  DB: ${configService.get('dbUrl')}\n`);
     logger.log(`Server running on http://localhost:${port}/api/v1`);
     console.log(`\n\nServer running on http://localhost:${port}/api/v1\n\n`);
 

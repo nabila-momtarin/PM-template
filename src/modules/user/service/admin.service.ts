@@ -27,7 +27,7 @@ export class AdminService {
 
   private logger = new Logger(AdminService.name);
 
-  async createUser(dto: CreateUserDto, currentUser: AuthenticatedUser) {
+  async createUser(dto: CreateUserDto, file: Express.Multer.File, currentUser: AuthenticatedUser) {
     // console.log('SERVICE : user : createUser\n');
     try {
       this.logger.log('SERVICE: CURRENT USER:', currentUser);
@@ -61,6 +61,11 @@ export class AdminService {
         role: new Types.ObjectId(dto.role),
         createdBy: new Types.ObjectId(currentUser.userId),
       };
+
+      // Add media if file is uploaded
+      if (file) {
+        userPayload.photo = `/uploads/profilePhoto/${file.filename}`;
+      }
 
       //creatae user
       const newUser: any = await this.userRepository.createOne(userPayload);
@@ -207,7 +212,12 @@ export class AdminService {
     }
   }
 
-  async updateUser(id: string, dto: UpdateUserDto, currentUser: AuthenticatedUser) {
+  async updateUser(
+    id: string,
+    dto: UpdateUserDto,
+    file: Express.Multer.File,
+    currentUser: AuthenticatedUser,
+  ) {
     this.logger.log('...');
 
     try {
@@ -228,13 +238,17 @@ export class AdminService {
         throw new NotFoundException('User not found');
       }
 
-      // const updatedUser = await this.userRepository.updateByID(id, dto);
-
-      const updatedUser = await this.userRepository.updateByID(id, {
+      const updatePayload = {
         ...dto,
         ...(dto.role && { role: new Types.ObjectId(dto.role) }),
         updatedBy: new Types.ObjectId(currentUser.userId),
-      });
+      };
+
+      if (file) {
+        updatePayload.photo = `/uploads/profilePhoto/${file.filename}`;
+      }
+
+      const updatedUser = await this.userRepository.updateByID(id, updatePayload);
 
       // console.log('updatedUser: SERVICE: ', updatedUser);
       this.logger.debug(`Updated User: SERVICE: ${updatedUser}`);

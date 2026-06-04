@@ -70,27 +70,27 @@ export class TaskController {
     return this.taskService.deleteTask(id, currentUser);
   }
 
-@Patch(':id/start')
-// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
-async startTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-  this.logger.debug('..');
-  console.log('>>> START HIT, currentUser:', currentUser);
-  return this.taskService.startTask(id, currentUser);
-}
+  @Patch(':id/start')
+  // @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+  async startTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('..');
+    console.log('>>> START HIT, currentUser:', currentUser);
+    return this.taskService.startTask(id, currentUser);
+  }
 
-@Patch(':id/pause')
-// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
-async pauseTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-  this.logger.debug('..');
-  return this.taskService.pauseTask(id, currentUser);
-}
+  @Patch(':id/pause')
+  // @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+  async pauseTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('..');
+    return this.taskService.pauseTask(id, currentUser);
+  }
 
-@Patch(':id/complete')
-// @UseGuards(JwtAuthGuard)   ← REMOVE THIS
-async completeTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
-  this.logger.debug('..');
-  return this.taskService.completeTask(id, currentUser);
-}
+  @Patch(':id/complete')
+  // @UseGuards(JwtAuthGuard)   ← REMOVE THIS
+  async completeTask(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('..');
+    return this.taskService.completeTask(id, currentUser);
+  }
 
   @Patch(':id/due-date')
   dueDateUpdateTask(
@@ -104,13 +104,15 @@ async completeTask(@Param('id') id: string, @CurrentUser() currentUser: Authenti
   }
 
   @Patch(':id')
+  @UseInterceptors(FilesInterceptor('attachments', 5, createMulterOptions('tasks')))
   async updateTask(
     @Param('id') id: string,
     @Body() dto: UpdateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     this.logger.debug('..');
-    return this.taskService.updateTask(id, dto, currentUser);
+    return this.taskService.updateTask(id, dto, files, currentUser);
   }
 
   @Get()

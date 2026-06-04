@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Logger, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { CreateUserDto } from '../dto/admin-create-user.dto';
 import { UsersQueryDto } from '../dto/admin-getAll-users.dto';
 import { UpdateUserDto } from '../dto/admin-update-user.dto';
@@ -6,6 +6,8 @@ import { ResetPasswordDto } from '../dto/admin-reset-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { AdminService } from '../service/admin.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createMulterOptions } from 'src/common/upload/multer-options';
 
 @Controller('/users')
 export class AdminController {
@@ -13,10 +15,15 @@ export class AdminController {
   private logger = new Logger(AdminController.name);
 
   @Post()
-  async createUser(@Body() dto: CreateUserDto, @CurrentUser() user: AuthenticatedUser) {
+  @UseInterceptors(FileInterceptor('photo', createMulterOptions('profilePhoto')))
+  async createUser(
+    @Body() dto: CreateUserDto, 
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
     this.logger.debug('CONTROLLER : admin : createUser\n');
 
-    return this.adminService.createUser(dto, user);
+    return this.adminService.createUser(dto, file, user);
   }
 
   @Get()
@@ -42,15 +49,17 @@ export class AdminController {
   }
 
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('photo', createMulterOptions('profilePhoto')))
   async updateUser(
     @Param('id') id: string, 
     @Body() dto: UpdateUserDto,
+     @UploadedFile() file: Express.Multer.File,
   @CurrentUser() currentUser: AuthenticatedUser, 
   ) {
 
     this.logger.debug('...');
 
-    return this.adminService.updateUser(id, dto, currentUser);
+    return this.adminService.updateUser(id, dto, file, currentUser);
   }
 
   @Patch(':id/reset-password')
