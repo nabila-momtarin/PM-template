@@ -8,14 +8,21 @@ import { UserRepository } from './repositroy/user.repository';
 import { AdminService } from './service/admin.service';
 import { MyService } from './service/me.service';
 import { MyController } from './controllers/me.controller';
+import { Ticket, TicketSchema } from '../ticket/entities/ticket.schema';
+import { MyPriorityService } from './service/my-priority.service';
+import { Task, TaskSchema } from '../task/entities/task.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]), 
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Task.name, schema: TaskSchema },
+      { name: Ticket.name, schema: TicketSchema },
+    ]),
     forwardRef(() => RoleModule),
-],
+  ],
   controllers: [AdminController, MyController],
-  providers: [UserRepository, AdminService, MyService],
+  providers: [UserRepository, AdminService, MyService, MyPriorityService],
   exports: [UserRepository],
 })
 export class UserModule {}
