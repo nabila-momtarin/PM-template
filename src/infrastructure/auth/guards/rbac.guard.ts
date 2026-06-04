@@ -117,11 +117,11 @@ export class RbacGuard implements CanActivate {
 
     // Skip RBAC check(But check JWT)for routes marked with @SkipRbac() decorator
     const skipRbac = this.reflector.getAllAndOverride<boolean>(SKIP_RBAC, [
-  context.getHandler(),
-  context.getClass(),
-]);
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
-if (skipRbac) return true;
+    if (skipRbac) return true;
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
@@ -132,8 +132,6 @@ if (skipRbac) return true;
     // Fetch role from cache, fall back to database
     const cacheKey = `role:${user.roleId}`;
     let role: any = await this.cacheManager.get<RoleDocument>(cacheKey);
-
-    console.log('>>> RBAC role from cache:', role);
 
     if (!role) {
       this.logger.debug(`Cache miss for ${cacheKey}, querying DB`);
@@ -146,6 +144,7 @@ if (skipRbac) return true;
         );
       }
 
+      console.log('>>> RBAC role from cache:', role);
       console.log('>>> RBAC role from DB:', role);
       // Store in cache for next request (TTL set in CacheModule.register)
       await this.cacheManager.set(cacheKey, role);
