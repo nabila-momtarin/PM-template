@@ -22,21 +22,19 @@ export function setupSecurity(app: INestApplication, configService: ConfigServic
   );
 
   // cors configuration
-  const rawOrigin = configService.get<string>('CORS_ORIGIN' /* 'corsOrigin' */) ?? 'http://localhost:3000';
+  const rawOrigin =
+    configService.get<string>('CORS_ORIGIN' /* 'corsOrigin' */) ?? 'http://localhost:3000';
 
   // Support comma-separated list: "http://localhost:3000,https://app.example.com"
   const allowedOrigins = rawOrigin.split(',').map((o) => o.trim());
-  
-  const corsOrigin = configService.get<string>('CORS_ORIGIN') || '*';
+
+  console.log('CORS_ORIGIN raw:', rawOrigin);
+  console.log('allowedOrigins:', allowedOrigins);
+
+  // const corsOrigin = configService.get<string>('CORS_ORIGIN') || '*';
   app.enableCors({
     // origin: corsOrigin,
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS blocked: ${origin}`));
-      }
-    },
+    origin: '*', // Allow all origins for development; adjust in production
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-businessid'],
