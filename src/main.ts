@@ -22,6 +22,7 @@ async function bootstrap() {
     setupSecurity(app, configService);
     setupCompression(app);
     setupPipes(app);
+  
     app.useGlobalFilters(
       new HttpExceptionFilter(new Logger(HttpExceptionFilter.name)),
     );
