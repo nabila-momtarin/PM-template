@@ -25,20 +25,14 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  //test purpose, remove in production
-  @Get('me-test')
-  meTest(@CurrentUser() user: AuthenticatedUser) {
-    this.logger.log('Current user:', user);
-    return {
-      success: true,
-      message: 'Current user fetched successfully',
-      data: user,
-    };
-  }
-
-  // @Get('me')
-  // @UseGuards(JwtAuthGuard)
-  // getMe(@CurrentUser() user: JwtPayload) {
-  //     return user;
+  // //test purpose, remove in production
+  // @Get('me-test')
+  // meTest(@CurrentUser() user: AuthenticatedUser) {
+  //   this.logger.log('Current user:', user);
+  //   return {
+  //     success: true,
+  //     message: 'Current user fetched successfully',
+  //     data: user,
+  //   };
   // }
 }
