@@ -21,11 +21,11 @@ export function setupSecurity(app: INestApplication, configService: ConfigServic
     }),
   );
 
-  //cors configuration
-  // const rawOrigin = configService.get<string>('corsOrigin') ?? 'http://localhost:3000';
+  // cors configuration
+  const rawOrigin = configService.get<string>('corsOrigin') ?? 'http://localhost:3000';
 
-  // // Support comma-separated list: "http://localhost:3000,https://app.example.com"
-  // const allowedOrigins = rawOrigin.split(',').map((o) => o.trim());
+  // Support comma-separated list: "http://localhost:3000,https://app.example.com"
+  const allowedOrigins = rawOrigin.split(',').map((o) => o.trim());
   
   const corsOrigin = configService.get<string>('CORS_ORIGIN') || '*';
   app.enableCors({

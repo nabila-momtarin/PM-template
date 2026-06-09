@@ -29,12 +29,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 @Module({
   imports: [
     CacheModule.register({
-      isGlobal: true,    // ← সব module এ available
-      ttl: 300,          // ← 5 minutes (seconds)
-      max: 100,          // ← maximum 100 items
+      isGlobal: true, // ← সব module এ available
+      ttl: 300, // ← 5 minutes (seconds)
+      max: 100, // ← maximum 100 items
     }),
     MongooseModule.forFeature([
-      { name: Role.name, schema: RoleSchema },  // ← add
+      { name: Role.name, schema: RoleSchema }, // ← add
     ]),
     // ── Configuration ──────────────────────────────────────────────────────
     ConfigModule.forRoot({
@@ -46,19 +46,17 @@ import { MongooseModule } from '@nestjs/mongoose';
       // validationOptions: { abortEarly: false },
     }),
 
-    // ── Infrastructure ─────────────────────────────────────────────────────
-    // AuthModule,
     DatabaseModule, // ← uncomment when DB is available
 
+    // ── Infrastructure ─────────────────────────────────────────────────────
+    AuthInfrastructureModule,
+    AuthModule,
+
     // ── Feature Modules ────────────────────────────────────────────────────
-    // Add new feature modules here following the UserModule pattern.
-    // UserModule, // ← requires DatabaseModule
     PermissionModule,
     RoleModule,
     UserModule,
     ProjectModule,
-    AuthModule,
-    AuthInfrastructureModule,
     TicketModule,
     TaskModule,
     SeedModule,
@@ -77,7 +75,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     // { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RbacGuard },  
+    { provide: APP_GUARD, useClass: RbacGuard },
   ],
 })
 // export class AppModule implements NestModule {
