@@ -110,6 +110,26 @@ export class AdminService {
         page: String(query.page ?? 1),
         length: String(query.limit ?? query.length ?? 10),
         useLean: true,
+        useAggregation: true,
+        aggregationPipeline: [
+          {
+            $lookup: {
+              from: 'roles',
+              localField: 'role',
+              foreignField: '_id',
+              as: 'role',
+              pipeline: [{ $project: { _id: 1, roleName: 1 } }],
+            },
+          },
+
+          {
+            $unwind: {
+              path: '$role',
+              preserveNullAndEmptyArrays: true, // // role না থাকলেও user return হবে
+            },
+          },
+        ],
+        excludeFields: ['password', '__v', 'isDeleted', 'deletedAt', 'deletedBy', 'createdBy', 'updatedAt', 'updatedBy'],
       });
 
       this.logger.log('allUsers: SERVICE: ', allUsers);
