@@ -23,7 +23,7 @@ export class AuthService {
       const user = await this.userRepository.findOne({
         filters: { email },
         useLean: true,
-        select: '+password name email role',
+        select: '+password name email role photo',
         populate: {
           path: 'role',
           select: 'roleName permissions',
@@ -35,6 +35,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
+      this.logger.log("User : ", user);
       const isPasswordMatched = await argon2.verify(user.password, password);
 
       if (!isPasswordMatched) {
@@ -54,6 +55,7 @@ export class AuthService {
 
       const { password: _password, ...safeUser } = user;
 
+      this.logger.debug(`Safe User Data: ${JSON.stringify(safeUser)}`);
       this.logger.log(`Login successful: ${email}`);
 
       return {

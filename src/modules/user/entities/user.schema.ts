@@ -15,7 +15,7 @@ export class User {
   @Prop({ type: String /*, index: true */ })
   phoneNumber?: string;
 
-  @Prop({ type: String })
+  @Prop({ type: String, default: null })
   photo?: string;
 
   @Prop({ type: String, required: true, select: false })
