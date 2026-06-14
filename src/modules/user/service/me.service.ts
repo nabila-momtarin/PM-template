@@ -19,7 +19,11 @@ export class MyService {
         const myProfile = await this.userRepository.findById({
             id: me.userId,
             useLean: true,
-            select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt'
+            select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt',
+             populate: {
+      path: 'role',
+      select: '_id roleName permissions',  // ← permissions সহ
+    },
         });
 
         this.logger.debug(`Fetched User: Me: SERVICE: ${myProfile}`);
