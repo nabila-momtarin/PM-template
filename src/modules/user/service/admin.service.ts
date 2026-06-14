@@ -160,7 +160,7 @@ export class AdminService {
         select: '-password -__v -isDeleted -deletedAt -deletedBy -createdBy -updatedAt',
         populate: {
           path: 'role',
-          select: 'roleName permissions',
+          select: '_id roleName',
         },
       });
 
