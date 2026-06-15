@@ -1,38 +1,37 @@
 import { PermissionCatalog } from '../types/permissions.type';
 
 export const PERMISSIONS: PermissionCatalog = [
-
   // ── Me: 0 ─────────────────────────────────────────────
-  {
-    method: 'GET',
-    path: '/api/v1/me',
-    label: 'View my profile',
-    category: 'Me',
-  },
-   {
-    method: 'GET',
-    path: '/api/v1/me/my-priority-tasks',
-    label: 'View my priority tasks',
-    category: 'Me',
-  },
-   {
-    method: 'GET',
-    path: '/api/v1/me/my-priority-tickets',
-    label: 'View my priority tickets',
-    category: 'Me',
-  },
-   {
-    method: 'PATCH',
-    path: '/api/v1/me',
-    label: 'Update my profile',
-    category: 'Me',
-  },
-   {
-    method: 'PATCH',
-    path: '/api/v1/me/change-password',
-    label: 'Change my password',
-    category: 'Me',
-  },
+  // {
+  //   method: 'GET',
+  //   path: '/api/v1/me',
+  //   label: 'View my profile',
+  //   category: 'Me',
+  // },
+  //  {
+  //   method: 'GET',
+  //   path: '/api/v1/me/my-priority-tasks',
+  //   label: 'View my priority tasks',
+  //   category: 'Me',
+  // },
+  //  {
+  //   method: 'GET',
+  //   path: '/api/v1/me/my-priority-tickets',
+  //   label: 'View my priority tickets',
+  //   category: 'Me',
+  // },
+  //  {
+  //   method: 'PATCH',
+  //   path: '/api/v1/me',
+  //   label: 'Update my profile',
+  //   category: 'Me',
+  // },
+  //  {
+  //   method: 'PATCH',
+  //   path: '/api/v1/me/change-password',
+  //   label: 'Change my password',
+  //   category: 'Me',
+  // },
 
   // ── Tickets: 20 ─────────────────────────────────────────────
   {
@@ -238,23 +237,23 @@ export const PERMISSIONS: PermissionCatalog = [
     category: 'Tasks',
   },
   {
-  method: 'PATCH',
-  path: '/api/v1/tasks/:id/start',
-  label: 'Start task timer',
-  category: 'Tasks',
-},
-{
-  method: 'PATCH',
-  path: '/api/v1/tasks/:id/pause',
-  label: 'Pause task timer',
-  category: 'Tasks',
-},
-{
-  method: 'PATCH',
-  path: '/api/v1/tasks/:id/complete',
-  label: 'Complete task',
-  category: 'Tasks',
-},
+    method: 'PATCH',
+    path: '/api/v1/tasks/:id/start',
+    label: 'Start task timer',
+    category: 'Tasks',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tasks/:id/pause',
+    label: 'Pause task timer',
+    category: 'Tasks',
+  },
+  {
+    method: 'PATCH',
+    path: '/api/v1/tasks/:id/complete',
+    label: 'Complete task',
+    category: 'Tasks',
+  },
   {
     method: 'GET',
     path: '/api/v1/tasks',
@@ -287,12 +286,32 @@ export const PERMISSIONS: PermissionCatalog = [
     label: 'Delete user',
     category: 'Admin',
   },
-  {
-    method: 'PATCH',
-    path: '/api/v1/users/:id/reset-password',
-    label: 'Reset user password',
-    category: 'Admin',
-  },
+  // {
+  //   method: 'PATCH',
+  //   path: '/api/v1/users/:id/reset-password',
+  //   label: 'Reset user password',
+  //   category: 'Admin',
+  // },
+
+    // ── ADMIN/Users Dashboard ──────────────────────────────────────────────────────
+  // {
+  //   method: 'GET',
+  //   path: '/api/v1/userSummary',
+  //   label: 'View user summary',
+  //   category: 'Admin',
+  // },
+  // {
+  //   method: 'GET',
+  //   path: '/api/v1/ticketSummary',
+  //   label: 'View ticket summary',
+  //   category: 'Admin',
+  // },
+  // {
+  //   method: 'GET',
+  //   path: '/api/v1/taskSummary',
+  //   label: 'View task summary',
+  //   category: 'Admin',
+  // },
 
   // ── Roles: 5 ───────────────────────────────────────────────
   {
