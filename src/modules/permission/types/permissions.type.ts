@@ -4,7 +4,6 @@ export type PermissionCategory =
   | 'Projects'
   | 'Tasks'
   | 'Admin'
-  | 'Me'
   | 'Role';
 
 
