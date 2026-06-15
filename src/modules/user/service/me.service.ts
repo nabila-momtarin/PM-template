@@ -33,7 +33,8 @@ export class MyService {
     });
 
     this.logger.debug(`Fetched User: Me: SERVICE: ${myProfile}`);
-
+    this.logger.debug("Fetched User: Me: SERVICE: ", myProfile);
+    
     return {
       success: true,
       message: 'Profile fetched successfully',
