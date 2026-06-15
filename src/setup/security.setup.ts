@@ -47,7 +47,6 @@ export function setupSecurity(app: INestApplication, configService: ConfigServic
       windowMs: Number(rateLimitWindowMs),
       max: Number(rateLimitMax),
       message: 'Too many requests from this IP, please try again later.',
-      standardHeaders: true,
       legacyHeaders: false,
     }),
   );
