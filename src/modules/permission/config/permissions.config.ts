@@ -1,6 +1,39 @@
 import { PermissionCatalog } from '../types/permissions.type';
 
 export const PERMISSIONS: PermissionCatalog = [
+
+  // ── Me: 0 ─────────────────────────────────────────────
+  {
+    method: 'GET',
+    path: '/api/v1/me',
+    label: 'View my profile',
+    category: 'Me',
+  },
+   {
+    method: 'GET',
+    path: '/api/v1/me/my-priority-tasks',
+    label: 'View my priority tasks',
+    category: 'Me',
+  },
+   {
+    method: 'GET',
+    path: '/api/v1/me/my-priority-tickets',
+    label: 'View my priority tickets',
+    category: 'Me',
+  },
+   {
+    method: 'PATCH',
+    path: '/api/v1/me',
+    label: 'Update my profile',
+    category: 'Me',
+  },
+   {
+    method: 'PATCH',
+    path: '/api/v1/me/change-password',
+    label: 'Change my password',
+    category: 'Me',
+  },
+
   // ── Tickets: 20 ─────────────────────────────────────────────
   {
     method: 'GET',
