@@ -129,7 +129,7 @@ export class TaskService {
       const task = await this.taskRepository.findById({
         id,
         useLean: true,
-        select: '-__v -attachments -isDeleted -updatedAt -deletedAt -deletedBy -createdBy',
+        select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy',
         populate: [
           {
             path: 'assignee',
@@ -138,6 +138,10 @@ export class TaskService {
           {
             path: 'projectId',
             select: 'title type',
+          },
+          {
+            path: 'createdBy',
+            select: 'name',
           },
           {
             path: 'ticketId',
