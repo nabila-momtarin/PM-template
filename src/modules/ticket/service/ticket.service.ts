@@ -91,7 +91,8 @@ export class TicketService {
           'ticketType',
           // 'title',
           // 'ticketNumber',
-          // 'dueDate',
+           'dueDate',
+           'projectId',
           // 'createdAt',
         ],
         // useLean: true,
@@ -145,13 +146,13 @@ export class TicketService {
                   },
                 },
               ],
-              as: 'taskStats',
+              as: 'taskCounts',
             },
           },
           {
             $addFields: {
-              totalTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.totalTasks', 0] }, 0] },
-              completedTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.completedTasks', 0] }, 0] },
+              totalTasks: { $ifNull: [{ $arrayElemAt: ['$taskCounts.totalTasks', 0] }, 0] },
+              completedTasks: { $ifNull: [{ $arrayElemAt: ['$taskCounts.completedTasks', 0] }, 0] },
             },
           },
         ],
@@ -163,7 +164,7 @@ export class TicketService {
           'updatedAt',
           'updatedBy',
           'attachments',
-          'taskStats',
+          'taskCounts',
         ],
       });
 

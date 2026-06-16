@@ -211,7 +211,7 @@ export class TaskService {
           },
           {
             path: 'createdBy',
-            select: 'name',
+            select: 'name photo',
           },
           {
             path: 'ticketId',
