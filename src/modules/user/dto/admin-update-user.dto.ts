@@ -9,6 +9,7 @@ export class UpdateUserDto {
         typeof value === 'string' ? value.trim() : value,
     )
     @IsNotEmpty()
+    @IsOptional()
     @IsString()
     @MinLength(2)
     @MaxLength(100)
@@ -46,7 +47,7 @@ export class UpdateUserDto {
     )
     photo?: string;
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     @IsMongoId()
     role?: Types.ObjectId;

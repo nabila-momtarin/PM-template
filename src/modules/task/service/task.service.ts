@@ -22,7 +22,7 @@ export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly counterService: CounterService,
-  ) {}
+  ) { }
 
   private readonly logger = new Logger(TaskService.name);
 
@@ -89,6 +89,53 @@ export class TaskService {
         length: String(query.limit ?? query.length ?? 10),
         filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title'],
         useLean: true,
+        useAggregation: true,
+        aggregationPipeline: [
+          // assignee populate with only name and photo
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'assignee',
+              foreignField: '_id',
+              as: 'assignee',
+              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }] // only include _id, name, and photo in the assignee details
+            }
+          },
+          {
+            $unwind: {
+              path: '$assignee',
+              preserveNullAndEmptyArrays: true // assignee না থাকলেও task return হবে
+            },
+          },
+          // createdBy populate with only name and photo
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'createdBy',
+              foreignField: '_id',
+              as: 'createdBy',
+              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }] // only include _id, name, and photo in the createdBy details
+            }
+          },
+          {
+            $unwind: {
+              path: '$createdBy',
+              preserveNullAndEmptyArrays: true // createdBy না থাকলেও task return হবে
+            },
+          },
+           {
+            $lookup: {
+              from: 'projects',
+              localField: 'projectId',
+              foreignField: '_id',
+              as: 'project',
+              pipeline: [{ $project: { _id: 1, title: 1 } }],
+            },
+          },
+          { $unwind: { path: '$project', preserveNullAndEmptyArrays: true } },
+        ],
+        // excludeFields: ['-__v -isDeleted -updatedAt -deletedAt -deletedBy -attachments -ticketId'],
+        excludeFields: [ '__v', 'projectId', 'attachments', 'ticketId', 'isDeleted', 'deletedAt', 'deletedBy', 'updatedAt', 'updatedBy'],
       });
 
       this.logger.log('tasks: SERVICE: ', tasks);
@@ -129,7 +176,7 @@ export class TaskService {
       const task = await this.taskRepository.findById({
         id,
         useLean: true,
-        select: '-__v -attachments -isDeleted -updatedAt -deletedAt -deletedBy -createdBy',
+        select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy',
         populate: [
           {
             path: 'assignee',
@@ -138,6 +185,10 @@ export class TaskService {
           {
             path: 'projectId',
             select: 'title type',
+          },
+          {
+            path: 'createdBy',
+            select: 'name',
           },
           {
             path: 'ticketId',
