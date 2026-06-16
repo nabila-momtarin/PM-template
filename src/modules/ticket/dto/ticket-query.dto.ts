@@ -22,9 +22,9 @@ export class TicketQueryDto extends PaginationQueryDto {
   @IsEnum(TicketType)
   ticketType?: TicketType;
 
-  @IsOptional()
-  @IsString()
-  search?: string;
+  // @IsOptional()
+  // @IsString()
+  // search?: string;
 
    @IsOptional()
   @Type(() => Number)

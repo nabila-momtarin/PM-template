@@ -464,6 +464,16 @@ export function mergeAndFilter(filter: string | undefined, extra: Record<string,
   return JSON.stringify({ and: { ...existing, ...extra } });
 }
 
+
+//new
+// export function mergeAndFilter(filter: string | undefined, extra: Record<string, any>): string {
+//   const parsed = filter ? JSON.parse(filter) : {};
+//   return JSON.stringify({
+//     ...parsed,
+//     and: { ...(parsed.and ?? {}), ...extra },
+//   });
+// }
+
 /**
  * Extracts the value of a specific field from the AND clause of a filter string.
  * Matches by base field name — operator suffix (__in, __eq, etc.) is ignored.
