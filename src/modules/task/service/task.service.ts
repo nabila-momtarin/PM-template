@@ -22,7 +22,7 @@ export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly counterService: CounterService,
-  ) { }
+  ) {}
 
   private readonly logger = new Logger(TaskService.name);
 
@@ -87,7 +87,7 @@ export class TaskService {
         sortStr: query.sort ?? '-createdAt',
         page: String(query.page ?? 1),
         length: String(query.limit ?? query.length ?? 10),
-        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title'],
+        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title', 'taskNumber'],
         useLean: true,
         useAggregation: true,
         aggregationPipeline: [
@@ -98,13 +98,13 @@ export class TaskService {
               localField: 'assignee',
               foreignField: '_id',
               as: 'assignee',
-              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }] // only include _id, name, and photo in the assignee details
-            }
+              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }], // only include _id, name, and photo in the assignee details
+            },
           },
           {
             $unwind: {
               path: '$assignee',
-              preserveNullAndEmptyArrays: true // assignee না থাকলেও task return হবে
+              preserveNullAndEmptyArrays: true, // assignee না থাকলেও task return হবে
             },
           },
           // createdBy populate with only name and photo
@@ -114,16 +114,17 @@ export class TaskService {
               localField: 'createdBy',
               foreignField: '_id',
               as: 'createdBy',
-              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }] // only include _id, name, and photo in the createdBy details
-            }
+              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }], // only include _id, name, and photo in the createdBy details
+            },
           },
           {
             $unwind: {
               path: '$createdBy',
-              preserveNullAndEmptyArrays: true // createdBy না থাকলেও task return হবে
+              preserveNullAndEmptyArrays: true, // createdBy না থাকলেও task return হবে
             },
           },
-           {
+          // project
+          {
             $lookup: {
               from: 'projects',
               localField: 'projectId',
@@ -133,9 +134,31 @@ export class TaskService {
             },
           },
           { $unwind: { path: '$project', preserveNullAndEmptyArrays: true } },
+
+          // ticket populate with only : _id, ticketNumber, priority
+          {
+            $lookup: {
+              from: 'tickets',
+              localField: 'ticketId',
+              foreignField: '_id',
+              as: 'ticket',
+              pipeline: [{ $project: { _id: 1, ticketNumber: 1, priority: 1 } }],
+            },
+          },
+          { $unwind: { path: '$ticket', preserveNullAndEmptyArrays: true } },
         ],
         // excludeFields: ['-__v -isDeleted -updatedAt -deletedAt -deletedBy -attachments -ticketId'],
-        excludeFields: [ '__v', 'projectId', 'attachments', 'ticketId', 'isDeleted', 'deletedAt', 'deletedBy', 'updatedAt', 'updatedBy'],
+        excludeFields: [
+          '__v',
+          'projectId',
+          'attachments',
+          'ticketId',
+          'isDeleted',
+          'deletedAt',
+          'deletedBy',
+          'updatedAt',
+          'updatedBy',
+        ],
       });
 
       this.logger.log('tasks: SERVICE: ', tasks);
@@ -188,7 +211,7 @@ export class TaskService {
           },
           {
             path: 'createdBy',
-            select: 'name',
+            select: 'name photo',
           },
           {
             path: 'ticketId',

@@ -79,8 +79,24 @@ export class TicketService {
     this.logger.log('SERVICE: ticket : getAllTickets');
 
     try {
+      // let parsedFilter: Record<string, any> = {};
+
+      // try {
+      //   if (query.filter && query.filter !== '{}') {
+      //     parsedFilter = JSON.parse(query.filter);
+      //   }
+      // } catch {
+      //   parsedFilter = {};
+      // }
+
+      // if (query.search) {
+      //   parsedFilter.or = [{ title__like: query.search }, { ticketNumber__like: query.search }];
+      // }
+
       const tickets = await this.ticketRepository.getAllData({
         filter: query.filter ?? '{}',
+        // filter: baseFilter,
+        // filter: JSON.stringify(parsedFilter),
         // filter: JSON.stringify({ and: filterObj }),
         sortStr: query.sort ?? '-createdAt',
         page: String(query.page ?? 1),
@@ -89,10 +105,11 @@ export class TicketService {
           'status',
           'priority',
           'ticketType',
-          // 'title',
-          // 'ticketNumber',
-          // 'dueDate',
-          // 'createdAt',
+          'title',
+          'ticketNumber',
+          'dueDate',
+          'createdAt',
+          'projects',
         ],
         // useLean: true,
         useAggregation: true,
@@ -145,13 +162,13 @@ export class TicketService {
                   },
                 },
               ],
-              as: 'taskStats',
+              as: 'taskCounts',
             },
           },
           {
             $addFields: {
-              totalTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.totalTasks', 0] }, 0] },
-              completedTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.completedTasks', 0] }, 0] },
+              totalTasks: { $ifNull: [{ $arrayElemAt: ['$taskCounts.totalTasks', 0] }, 0] },
+              completedTasks: { $ifNull: [{ $arrayElemAt: ['$taskCounts.completedTasks', 0] }, 0] },
             },
           },
         ],
@@ -163,7 +180,7 @@ export class TicketService {
           'updatedAt',
           'updatedBy',
           'attachments',
-          'taskStats',
+          'taskCounts',
         ],
       });
 
