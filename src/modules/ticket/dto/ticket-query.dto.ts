@@ -25,4 +25,10 @@ export class TicketQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  ticketNumber?: number;
 }
