@@ -21,7 +21,7 @@ export class TicketService {
     private readonly ticketRepository: TicketRepository,
     private readonly counterService: CounterService,
     @InjectModel(Task.name) private readonly taskModel: Model<TaskDocument>,
-  ) { }
+  ) {}
 
   private readonly logger = new Logger(TicketService.name);
 
@@ -94,7 +94,77 @@ export class TicketService {
           // 'dueDate',
           // 'createdAt',
         ],
-        useLean: true,
+        // useLean: true,
+        useAggregation: true,
+        aggregationPipeline: [
+          // projects populate
+          {
+            $lookup: {
+              from: 'projects',
+              localField: 'projects',
+              foreignField: '_id',
+              as: 'projects',
+              pipeline: [{ $project: { _id: 1, title: 1 } }],
+            },
+          },
+          // createdBy populate
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'createdBy',
+              foreignField: '_id',
+              as: 'createdBy',
+              pipeline: [{ $project: { _id: 1, name: 1, photo: 1 } }],
+            },
+          },
+          {
+            $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true },
+          },
+          // task counts per ticket
+          {
+            $lookup: {
+              from: 'tasks',
+              let: { ticketId: '$_id' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [{ $eq: ['$ticketId', '$$ticketId'] }, { $eq: ['$isDeleted', false] }],
+                    },
+                  },
+                },
+                {
+                  $group: {
+                    _id: null,
+                    totalTasks: { $sum: 1 },
+                    completedTasks: {
+                      $sum: {
+                        $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0],
+                      },
+                    },
+                  },
+                },
+              ],
+              as: 'taskStats',
+            },
+          },
+          {
+            $addFields: {
+              totalTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.totalTasks', 0] }, 0] },
+              completedTasks: { $ifNull: [{ $arrayElemAt: ['$taskStats.completedTasks', 0] }, 0] },
+            },
+          },
+        ],
+        excludeFields: [
+          '__v',
+          'isDeleted',
+          'deletedAt',
+          'deletedBy',
+          'updatedAt',
+          'updatedBy',
+          'attachments',
+          'taskStats',
+        ],
       });
 
       this.logger.log('tickets: SERVICE: ', tickets);
@@ -141,7 +211,7 @@ export class TicketService {
           },
           {
             path: 'createdBy',
-            select: 'name',
+            select: 'name photo',
           },
         ],
         select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate',
@@ -154,11 +224,12 @@ export class TicketService {
       // ✅ H-04 — aggregate totalEstimatedTime and totalWorkTime from linked tasks
       const taskAggregates = await this.taskModel.aggregate([
         { $match: { ticketId: new Types.ObjectId(ticketId), isDeleted: false } },
-        { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+        { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: true } },
         {
           $group: {
             _id: '$_id',
             estimatedTime: { $first: '$estimatedTime' },
+            status: { $first: '$status' },
             workTimeMs: {
               $sum: {
                 $subtract: [
@@ -172,10 +243,12 @@ export class TicketService {
         {
           $group: {
             _id: null,
+            totalTasks: { $sum: 1 },
+            completedTasks: { $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] } },
             totalEstimatedTime: { $sum: '$estimatedTime' },
             totalWorkTimeMs: { $sum: '$workTimeMs' },
-          }
-        }
+          },
+        },
       ]);
 
       return {
@@ -183,7 +256,11 @@ export class TicketService {
         message: 'Ticket fetched successfully',
         data: {
           ...ticket,
-          totalEstimatedTime: taskAggregates[0] ? minsToHHMM(taskAggregates[0].totalEstimatedTime) : '00:00',
+          totalTasks: taskAggregates[0]?.totalTasks ?? 0,
+          completedTasks: taskAggregates[0]?.completedTasks ?? 0,
+          totalEstimatedTime: taskAggregates[0]
+            ? minsToHHMM(taskAggregates[0].totalEstimatedTime)
+            : '00:00',
           totalWorkTime: taskAggregates[0] ? msToHHMM(taskAggregates[0].totalWorkTimeMs) : '00:00',
         },
       };
