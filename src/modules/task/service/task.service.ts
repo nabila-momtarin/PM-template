@@ -8,7 +8,7 @@ import {
 import { CreateTaskDto } from '../dto/create-task.dto';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { TaskRepository } from '../repositroy/task.repository';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Task } from '../entities/task.schema';
 import { UpdateTaskDto } from '../dto/update-task.dto';
 import { TaskDueDateUpdateDTO } from '../dto/task-due-date.dto';
@@ -18,12 +18,17 @@ import { mergeAndFilter } from 'src/common/utils/params-decoder';
 import { CounterService } from 'src/common/services/counter.service';
 
 import * as fs from 'fs';
+import { Project, ProjectDocument } from 'src/modules/project/entities/project.schema';
+import { Ticket, TicketDocument } from 'src/modules/ticket/entities/ticket.schema';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly counterService: CounterService,
+    @InjectModel(Ticket.name) private readonly ticketModel: Model<TicketDocument>,
+    @InjectModel(Project.name) private readonly projectModel: Model<ProjectDocument>,
   ) {}
 
   private readonly logger = new Logger(TaskService.name);
@@ -46,6 +51,31 @@ export class TaskService {
     this.logger.log('HAPPI HAPPI HAPPI');
 
     try {
+      // ── Validate ticket exists (non-deleted) ──
+      const ticket = await this.ticketModel
+        .findOne({ _id: dto.ticketId, isDeleted: { $ne: true } })
+        .lean();
+      if (!ticket) {
+        this.logger.error('Ticket not found');
+        throw new NotFoundException('Ticket not found');
+      }
+      // ── Validate project exists (non-deleted) ──
+      const project = await this.projectModel
+        .findOne({ _id: dto.projectId, isDeleted: { $ne: true } })
+        .lean();
+      if (!project) {
+        this.logger.error('Project not found');
+        throw new NotFoundException('Project not found');
+      }
+      // ── Case 1: project must be present in the ticket's projects[] ──
+      const projectIsLinkedToTicket = (ticket.projects ?? []).some(
+        (p) => p.toString() === dto.projectId,
+      );
+      if (!projectIsLinkedToTicket) {
+        this.logger.error('Project is not associated with the given ticket');
+        throw new BadRequestException('Project is not associated with the given ticket');
+      }
+
       const taskNumber = await this.generateTaskNumber();
       this.logger.log(`Generated task number: ${taskNumber}`);
 
@@ -89,7 +119,15 @@ export class TaskService {
         sortStr: query.sort ?? '-createdAt',
         page: String(query.page ?? 1),
         length: String(query.limit ?? query.length ?? 10),
-        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title', 'dueDate', 'taskNumber'],
+        filterableFields: [
+          'status',
+          'assignee',
+          'projectId',
+          'ticketId',
+          'title',
+          'dueDate',
+          'taskNumber',
+        ],
         useLean: true,
         useAggregation: true,
         aggregationPipeline: [
@@ -371,7 +409,7 @@ export class TaskService {
       dto['status'] = 'Todo'; // reset to Todo for the new assignee
     }
 
-     const { removeAttachments, ...restDto } = dto; // strip non-schema field
+    const { removeAttachments, ...restDto } = dto; // strip non-schema field
 
     const updatePayload = {
       ...restDto,
@@ -379,18 +417,18 @@ export class TaskService {
       updatedBy: new Types.ObjectId(currentUser.userId),
     };
 
-      // remove requested attachments first
-  let baseAttachments = task.attachments ?? [];
-  if (removeAttachments?.length) {
-    const toRemove = new Set(removeAttachments);
-    baseAttachments = baseAttachments.filter((path) => !toRemove.has(path));
+    // remove requested attachments first
+    let baseAttachments = task.attachments ?? [];
+    if (removeAttachments?.length) {
+      const toRemove = new Set(removeAttachments);
+      baseAttachments = baseAttachments.filter((path) => !toRemove.has(path));
 
-    for (const path of removeAttachments) {
-      fs.unlink(`.${path}`, (err) => {
-        if (err) this.logger.warn(`Failed to delete attachment file: ${path}`, err);
-      });
+      for (const path of removeAttachments) {
+        fs.unlink(`.${path}`, (err) => {
+          if (err) this.logger.warn(`Failed to delete attachment file: ${path}`, err);
+        });
+      }
     }
-  }
 
     if (files && files.length > 0) {
       const uploadedAttachments = files.map((file) => `/uploads/tasks/${file.filename}`);
@@ -399,10 +437,10 @@ export class TaskService {
         ...baseAttachments, // existing ones (after removal applied)
         ...uploadedAttachments, // new ones appended
       ];
-    }else if (removeAttachments?.length) {
-    // only a removal happened, no new files — still must persist the trimmed list
-    updatePayload['attachments'] = baseAttachments;
-  }
+    } else if (removeAttachments?.length) {
+      // only a removal happened, no new files — still must persist the trimmed list
+      updatePayload['attachments'] = baseAttachments;
+    }
 
     const updated = await this.taskRepository.updateByID(id, updatePayload, { new: true });
     return { success: true, message: 'Task updated successfully', data: updated };
