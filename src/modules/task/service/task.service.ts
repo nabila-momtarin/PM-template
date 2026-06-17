@@ -87,7 +87,7 @@ export class TaskService {
         sortStr: query.sort ?? '-createdAt',
         page: String(query.page ?? 1),
         length: String(query.limit ?? query.length ?? 10),
-        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title', 'taskNumber'],
+        filterableFields: ['status', 'assignee', 'projectId', 'ticketId', 'title', 'dueDate', 'taskNumber'],
         useLean: true,
         useAggregation: true,
         aggregationPipeline: [
