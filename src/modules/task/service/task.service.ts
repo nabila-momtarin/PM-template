@@ -17,6 +17,8 @@ import { TaskQueryDto } from '../dto/task-query.dto';
 import { mergeAndFilter } from 'src/common/utils/params-decoder';
 import { CounterService } from 'src/common/services/counter.service';
 
+import * as fs from 'fs';
+
 @Injectable()
 export class TaskService {
   constructor(
@@ -369,19 +371,38 @@ export class TaskService {
       dto['status'] = 'Todo'; // reset to Todo for the new assignee
     }
 
+     const { removeAttachments, ...restDto } = dto; // strip non-schema field
+
     const updatePayload = {
-      ...dto,
+      ...restDto,
       ...(dto.assignee && { assignee: new Types.ObjectId(dto.assignee) }),
       updatedBy: new Types.ObjectId(currentUser.userId),
     };
 
+      // remove requested attachments first
+  let baseAttachments = task.attachments ?? [];
+  if (removeAttachments?.length) {
+    const toRemove = new Set(removeAttachments);
+    baseAttachments = baseAttachments.filter((path) => !toRemove.has(path));
+
+    for (const path of removeAttachments) {
+      fs.unlink(`.${path}`, (err) => {
+        if (err) this.logger.warn(`Failed to delete attachment file: ${path}`, err);
+      });
+    }
+  }
+
     if (files && files.length > 0) {
       const uploadedAttachments = files.map((file) => `/uploads/tasks/${file.filename}`);
       updatePayload['attachments'] = [
-        ...(task.attachments ?? []), // existing ones
+        // ...(task.attachments ?? []), // existing ones
+        ...baseAttachments, // existing ones (after removal applied)
         ...uploadedAttachments, // new ones appended
       ];
-    }
+    }else if (removeAttachments?.length) {
+    // only a removal happened, no new files — still must persist the trimmed list
+    updatePayload['attachments'] = baseAttachments;
+  }
 
     const updated = await this.taskRepository.updateByID(id, updatePayload, { new: true });
     return { success: true, message: 'Task updated successfully', data: updated };
