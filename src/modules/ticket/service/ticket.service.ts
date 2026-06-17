@@ -78,6 +78,8 @@ export class TicketService {
   async getAllTickets(query: TicketQueryDto) {
     this.logger.log('SERVICE: ticket : getAllTickets');
 
+    console.log('Received query:', JSON.stringify(query, null, 2));
+
     try {
       // let parsedFilter: Record<string, any> = {};
 

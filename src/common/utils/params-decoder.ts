@@ -444,35 +444,24 @@ export function buildNestedQuery(path: string[], value: any): Record<string, any
 }
 
 /**
- * Merges multiple Mongoose where-clause objects with $and.
- */
-export function mergeWhereClause(...clauses: Record<string, any>[]): Record<string, any> {
-  const nonEmpty = clauses.filter((c) => c && Object.keys(c).length > 0);
-  if (nonEmpty.length === 0) return {};
-  if (nonEmpty.length === 1) return nonEmpty[0];
-  return { $and: nonEmpty };
-}
-
-/**
  * Merges extra AND conditions into an existing filter string.
  *
  * @example
  * mergeAndFilter(query.filter, { businessId__in: ['id1', 'id2'] })
  */
-export function mergeAndFilter(filter: string | undefined, extra: Record<string, any>): string {
-  const existing = filter ? (JSON.parse(filter)?.and ?? {}) : {};
-  return JSON.stringify({ and: { ...existing, ...extra } });
-}
-
+// export function mergeAndFilter(filter: string | undefined, extra: Record<string, any>): string {
+//   const existing = filter ? (JSON.parse(filter)?.and ?? {}) : {};
+//   return JSON.stringify({ and: { ...existing, ...extra } });
+// }
 
 //new
-// export function mergeAndFilter(filter: string | undefined, extra: Record<string, any>): string {
-//   const parsed = filter ? JSON.parse(filter) : {};
-//   return JSON.stringify({
-//     ...parsed,
-//     and: { ...(parsed.and ?? {}), ...extra },
-//   });
-// }
+export function mergeAndFilter(filter: string | undefined, extra: Record<string, any>): string {
+  const parsed = filter ? JSON.parse(filter) : {};
+  return JSON.stringify({
+    ...parsed,
+    and: { ...(parsed.and ?? {}), ...extra },
+  });
+}
 
 /**
  * Extracts the value of a specific field from the AND clause of a filter string.
