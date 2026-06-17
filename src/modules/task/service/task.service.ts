@@ -76,6 +76,30 @@ export class TaskService {
         throw new BadRequestException('Project is not associated with the given ticket');
       }
 
+      // ── Case 2 & 3: task due date vs ticket due date ──
+      let taskDueDate: Date;
+
+      if (dto.dueDate) {
+        const parsedDueDate = new Date(dto.dueDate);
+
+        if (isNaN(parsedDueDate.getTime())) {
+          this.logger.error('Invalid due date');
+          throw new BadRequestException('Invalid due date');
+        }
+
+        if (parsedDueDate > ticket.dueDate) {
+          this.logger.error('Task due date cannot be later than the ticket due date');
+          throw new BadRequestException(
+            'Task due date cannot be later than the due date of the associated ticket',
+          );
+        }
+
+        taskDueDate = parsedDueDate;
+      } else {
+        // Not provided → default to the ticket's due date
+        taskDueDate = ticket.dueDate;
+      }
+
       const taskNumber = await this.generateTaskNumber();
       this.logger.log(`Generated task number: ${taskNumber}`);
 
