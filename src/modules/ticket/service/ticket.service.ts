@@ -111,6 +111,7 @@ export class TicketService {
           'ticketNumber',
           'dueDate',
           'createdAt',
+          'createdBy',
           'projects',
         ],
         // useLean: true,

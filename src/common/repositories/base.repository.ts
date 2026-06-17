@@ -587,8 +587,11 @@ export class BaseRepository<T extends Document> {
         },
       };
 
-      const pipeline = [...aggregationPipeline, { $match: baseFilter }, facetStage];
+      // const pipeline = [...aggregationPipeline, { $match: baseFilter }, facetStage];
 
+      const pipeline = [{ $match: baseFilter }, ...aggregationPipeline, facetStage];
+
+      
       const aggregationOptions: AggregateOptions = {};
       if (session) aggregationOptions.session = session;
       if (allowDiskUse) aggregationOptions.allowDiskUse = allowDiskUse;
