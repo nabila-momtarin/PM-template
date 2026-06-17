@@ -51,7 +51,7 @@ export class TaskService {
     this.logger.log('HAPPI HAPPI HAPPI');
 
     try {
-      // ── Validate ticket exists (non-deleted) ──
+      //── Validate ticket exists (non-deleted) ──
       const ticket = await this.ticketModel
         .findOne({ _id: dto.ticketId, isDeleted: { $ne: true } })
         .lean();
