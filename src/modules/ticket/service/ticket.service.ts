@@ -233,7 +233,7 @@ export class TicketService {
             select: 'name photo',
           },
         ],
-        select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy -dueDate',
+        select: '-__v -isDeleted -updatedAt -deletedAt -deletedBy',
       });
 
       if (!ticket) {
