@@ -146,6 +146,7 @@ export class TaskService {
         filterableFields: [
           'status',
           'assignee',
+          'assignee._id',
           'projectId',
           'ticketId',
           'title',
