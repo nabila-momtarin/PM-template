@@ -54,4 +54,8 @@ export class UpdateTaskDto {
   //   @IsArray()
   //   @IsString({ each: true })
   //   attachments?: string[];
+
+  @IsOptional()
+  @IsMongoId()
+  projectId?: string;
 }
