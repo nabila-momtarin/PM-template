@@ -47,7 +47,7 @@ export class SeedService implements OnApplicationBootstrap {
 
     const superAdmin = await this.userModel.create({
       name: 'Super Admin',
-      email: 'admin@company.com',
+      email: 'admin@taghyeer.ai',
       password: hashedPassword,
       role: superAdminRole._id,
       isDeleted: false,
@@ -56,7 +56,7 @@ export class SeedService implements OnApplicationBootstrap {
     this.logger.log(`Super Admin user created: ${superAdmin.email}`);
     this.logger.log('==============================');
     this.logger.log('Super Admin credentials:');
-    this.logger.log('Email:    admin@company.com');
+    this.logger.log('Email:    admin@taghyeer.ai');
     this.logger.log('Password: Admin@1234');
     this.logger.log('==============================');
   }
