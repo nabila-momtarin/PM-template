@@ -24,10 +24,12 @@ export class Task {
   @Prop({ type: [String], default: [] })
   attachments: string[];
 
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.PROJECT, required: true })
+  //change later to required
+  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.PROJECT/* , required: true  */})
   projectId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.TICKET, required: true })
+  //change later to required
+  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.TICKET/* , required: true  */})
   ticketId: Types.ObjectId;
 
   @Prop({ type: String, enum: Object.values(TaskStatus), required: true, default: TaskStatus.TODO })
