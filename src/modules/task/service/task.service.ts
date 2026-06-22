@@ -553,8 +553,8 @@ export class TaskService {
 
     if (task.status === 'Completed') throw new BadRequestException('Task is already completed');
 
-    // if (task.status === 'Todo' && task.worktime.length === 0)
-    //   throw new BadRequestException('Start the task before completing it.');
+    if (task.status === 'Todo' && task.worktime.length === 0)
+      throw new BadRequestException('Start the task before completing it.');
 
     const now = new Date();
 
@@ -576,17 +576,27 @@ export class TaskService {
 
     // Todo → Completed (sessions already sealed, just close out)
     // completeTask In Progress branch — same fix:
-    const updated = await this.taskRepository.updateOne(
-      { _id: id, 'worktime.endTime': { $in: [null, undefined] } }, // ← handles both
-      {
-        $set: {
-          status: 'Completed',
-          completionDate: now,
-          'worktime.$.endTime': now,
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-      },
-    );
+    // const updated = await this.taskRepository.updateOne(
+    //   { _id: id, 'worktime.endTime': { $in: [null, undefined] } }, // ← handles both
+    //   {
+    //     $set: {
+    //       status: 'Completed',
+    //       completionDate: now,
+    //       'worktime.$.endTime': now,
+    //       updatedBy: new Types.ObjectId(currentUser.userId),
+    //     },
+    //   },
+    // );
+
+    const updated = await this.taskRepository.updateByID(
+    id,
+    {
+      status: 'Completed',
+      completionDate: now,
+      updatedBy: new Types.ObjectId(currentUser.userId),
+    },
+    { new: true },
+  );
 
     return { success: true, message: 'Task completed successfully', data: updated };
   }
