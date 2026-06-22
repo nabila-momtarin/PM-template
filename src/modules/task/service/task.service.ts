@@ -553,8 +553,8 @@ export class TaskService {
 
     if (task.status === 'Completed') throw new BadRequestException('Task is already completed');
 
-    if (task.status === 'Todo' && task.worktime.length === 0)
-      throw new BadRequestException('Start the task before completing it.');
+    // if (task.status === 'Todo' && task.worktime.length === 0)
+    //   throw new BadRequestException('Start the task before completing it.');
 
     const now = new Date();
 
