@@ -410,8 +410,12 @@ export class TicketService {
         throw new BadRequestException('Invalid date');
       }
 
+      // check the date is not in the past — compare calendar dates only, ignore time-of-day
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       //check the date is not in the past
-      if (newDueDate < new Date()) {
+      if (newDueDate < today) {
         this.logger.error('Due date cannot be in the past');
         throw new BadRequestException('Due date cannot be in the past');
       }
