@@ -67,16 +67,35 @@ export class TaskService {
         this.logger.error('Project not found');
         throw new NotFoundException('Project not found');
       }
-      // ── Case 1: project must be present in the ticket's projects[] ──
-      const projectIsLinkedToTicket = (ticket.projects ?? []).some(
-        (p) => p.toString() === dto.projectId,
-      );
-      if (!projectIsLinkedToTicket) {
-        this.logger.error('Project is not associated with the given ticket');
-        throw new BadRequestException('Project is not associated with the given ticket');
+
+      // ── Case 1: validate or auto-link project depending on ticket's current state ──
+      const ticketProjects = ticket.projects ?? [];
+
+      if (ticketProjects.length > 0) {
+        // ── Case 1: project must be present in the ticket's projects[] ──
+        const projectIsLinkedToTicket = ticketProjects.some((p) => p.toString() === dto.projectId);
+        if (!projectIsLinkedToTicket) {
+          this.logger.error('Project is not associated with the given ticket');
+          throw new BadRequestException('Project is not associated with the given ticket');
+        }
+      } else {
+        // ── Case 2: auto-link the project to the ticket if it's not already linked ──
+        this.logger.log(
+          `Ticket ${dto.ticketId} has no associated project — linking ${dto.projectId}`,
+        );
+
+        const updateResult = await this.ticketModel.updateOne(
+          { _id: dto.ticketId, isDeleted: { $ne: true } },
+          { $addToSet: { projects: new Types.ObjectId(dto.projectId) } },
+        );
+
+        if (updateResult.matchedCount === 0) {
+          this.logger.error('Ticket disappeared during auto-link');
+          throw new NotFoundException('Ticket not found');
+        }
       }
 
-      // ── Case 2 & 3: task due date vs ticket due date ──
+      // ── Case : task due date >= ticket due date ──
       let taskDueDate: Date;
 
       if (dto.dueDate) {
@@ -589,14 +608,14 @@ export class TaskService {
     // );
 
     const updated = await this.taskRepository.updateByID(
-    id,
-    {
-      status: 'Completed',
-      completionDate: now,
-      updatedBy: new Types.ObjectId(currentUser.userId),
-    },
-    { new: true },
-  );
+      id,
+      {
+        status: 'Completed',
+        completionDate: now,
+        updatedBy: new Types.ObjectId(currentUser.userId),
+      },
+      { new: true },
+    );
 
     return { success: true, message: 'Task completed successfully', data: updated };
   }
