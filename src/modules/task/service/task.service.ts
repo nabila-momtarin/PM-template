@@ -33,12 +33,6 @@ export class TaskService {
 
   private readonly logger = new Logger(TaskService.name);
 
-  // private async generateTaskNumber(): Promise<string> {
-  //   const totalTasks = await this.taskRepository.countDocuments();
-
-  //   return 'TASK-' + (totalTasks + 1);
-  // }
-
   private async generateTaskNumber(): Promise<string> {
     const seq = await this.counterService.generate('taskCounter');
     return `TASK-${seq}`;
@@ -369,72 +363,6 @@ export class TaskService {
     }
   }
 
-  // async updateTask(id: string, dto: UpdateTaskDto, currentUser: AuthenticatedUser) {
-  //   this.logger.debug('..');
-
-  //   try {
-  //     if (!Types.ObjectId.isValid(id)) {
-  //       this.logger.error('Invalid task id');
-  //       throw new BadRequestException('Invalid task id');
-  //     }
-
-  //     const taskToUpdate = await this.taskRepository.findById({ id, useLean: true });
-
-  //     this.logger.debug('update DTO: ', dto);
-
-  //     if (!taskToUpdate) {
-  //       this.logger.error('Task not found for : ', id);
-  //       throw new NotFoundException('Task not found');
-  //     }
-
-  //     const now = new Date();
-
-  //     // if (dto.status && dto.status === 'In Progress') {
-  //     //   const conflict = await this.taskRepository.findOne({
-  //     //     filters: {
-  //     //       assignee: taskToUpdate.assignee,
-  //     //       status: 'In Progress',
-  //     //       _id: { $ne: id }, // exclude the task being updated itself
-  //     //       isDeleted: false,
-  //     //     },
-  //     //   });
-
-  //     //   if (conflict) {
-  //     //     this.logger.error(
-  //     //       'This user already has a task in progress. Complete or pause it before starting another.',
-  //     //     );
-  //     //     throw new BadRequestException(
-  //     //       'This user already has a task in progress. Complete or pause it before starting another.',
-  //     //     );
-  //     //   }
-  //     // }
-
-  //     const updatePayload = {
-  //       ...dto,
-  //       assignee: new Types.ObjectId(dto.assignee),
-  //       updatedBy: new Types.ObjectId(currentUser.userId),
-  //       updatedAt: new Date(),
-  //     };
-
-  //     const updatedTask = await this.taskRepository.updateByID(id, updatePayload, {
-  //       useLean: true,
-  //       new: true,
-  //     });
-
-  //     this.logger.debug('Updated Task : ', updatedTask);
-
-  //     return {
-  //       success: true,
-  //       message: 'Task updated successfully',
-  //       data: updatedTask,
-  //     };
-  //   } catch (err) {
-  //     this.logger.error(err);
-  //     this.logger.error('TaskService.updateTask failed', err instanceof Error ? err.stack : err);
-  //     throw err;
-  //   }
-  // }
-
   async updateTask(
     id: string,
     dto: UpdateTaskDto,
@@ -490,7 +418,6 @@ export class TaskService {
     return { success: true, message: 'Task updated successfully', data: updated };
   }
 
-  // ──────────────────────────────────────────
   // START  (Todo → In Progress)
   // ──────────────────────────────────────────
   async startTask(id: string, currentUser: AuthenticatedUser) {
@@ -538,7 +465,6 @@ export class TaskService {
     return { success: true, message: 'Task started successfully', data: updated };
   }
 
-  // ──────────────────────────────────────────
   // PAUSE  (In Progress → Todo)
   // ──────────────────────────────────────────
   async pauseTask(id: string, currentUser: AuthenticatedUser) {
@@ -563,7 +489,6 @@ export class TaskService {
     return { success: true, message: 'Task paused successfully', data: updated };
   }
 
-  // ──────────────────────────────────────────
   // COMPLETE  (In Progress | Todo → Completed)
   // ──────────────────────────────────────────
   async completeTask(id: string, currentUser: AuthenticatedUser) {
@@ -642,8 +567,12 @@ export class TaskService {
         throw new BadRequestException('Invalid date');
       }
 
+      // check the date is not in the past — compare calendar dates only, ignore time-of-day
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       //check the date is not in the past
-      if (newDueDate < new Date()) {
+      if (newDueDate < today) {
         this.logger.error('Due date cannot be in the past');
         throw new BadRequestException('Due date cannot be in the past');
       }
