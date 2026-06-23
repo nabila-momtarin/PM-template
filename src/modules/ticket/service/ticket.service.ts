@@ -129,6 +129,10 @@ export class TicketService {
               pipeline: [{ $project: { _id: 1, title: 1 } }],
             },
           },
+
+          // {
+          //   $unwind: { path: '$projects', preserveNullAndEmptyArrays: true },
+          // },
           // createdBy populate
           {
             $lookup: {

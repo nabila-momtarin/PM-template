@@ -35,7 +35,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      this.logger.log("User : ", user);
+      // this.logger.log("User : ", user);
       const isPasswordMatched = await argon2.verify(user.password, password);
 
       if (!isPasswordMatched) {
@@ -55,7 +55,7 @@ export class AuthService {
 
       const { password: _password, ...safeUser } = user;
 
-      this.logger.debug(`Safe User Data: ${JSON.stringify(safeUser)}`);
+      // this.logger.debug(`Safe User Data: ${JSON.stringify(safeUser)}`);
       this.logger.log(`Login successful: ${email}`);
 
       return {

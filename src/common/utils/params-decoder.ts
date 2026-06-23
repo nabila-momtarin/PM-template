@@ -57,6 +57,8 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
       'notContains',
     ];
 
+    const castToObjectId = (value: any): any => new Types.ObjectId(value);
+
     const parseValue = (value: any, operator: string): any => {
       if (STRING_OPS.includes(operator)) {
         if (isValidObjectId(value)) {
@@ -64,6 +66,10 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
         }
 
         return value;
+      }
+
+      if (typeof value === 'string' && isValidObjectId(value)) {
+        return new Types.ObjectId(value);
       }
 
       if (typeof value === 'string' && ['true', 'false'].includes(value.toLowerCase())) {
@@ -94,13 +100,14 @@ export function filterParamsDecoder(filters: string): Record<string, any> {
           return { [field]: { $ne: value } };
 
         case 'in': {
-          const vals = Array.isArray(rawValue) ? rawValue : [rawValue];
+          const vals = (Array.isArray(rawValue) ? rawValue : [rawValue]).map(castToObjectId);
+          console.log('IN values for field', field, ':', vals);
           return { [field]: { $in: vals } };
         }
 
         case 'nin':
         case 'notIn': {
-          const vals = Array.isArray(rawValue) ? rawValue : [rawValue];
+          const vals = (Array.isArray(rawValue) ? rawValue : [rawValue]).map(castToObjectId);
           return { [field]: { $nin: vals } };
         }
 
