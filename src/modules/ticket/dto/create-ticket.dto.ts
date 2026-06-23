@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   Allow,
   IsArray,
@@ -46,6 +46,10 @@ export class CreateTicketDto {
   @IsOptional()
   attachments?: unknown;
 
+  @Transform(({ value }) => {
+  if (value === undefined || value === null) return value;
+  return Array.isArray(value) ? value : [value];
+})
   @IsArray()
   @IsOptional()
   @IsMongoId({ each: true })
