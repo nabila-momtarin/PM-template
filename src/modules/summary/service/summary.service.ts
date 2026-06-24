@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { minsToHHMM, msToHHMM } from 'src/common/utils/time.utils';
 import { Task, TaskDocument } from 'src/modules/task/entities/task.schema';
 import { Ticket, TicketDocument } from 'src/modules/ticket/entities/ticket.schema';
@@ -327,5 +327,25 @@ async getTicketSummary() {
     },
   };
 }
-} 
 
+  async getCurrentUserActiveTask(userId: string) {
+    const task = await this.taskModel
+      .findOne({ assignee: new Types.ObjectId(userId), status: 'In Progress', isDeleted: false })
+      .populate('assignee', 'name photo')
+      .populate('createdBy', 'name photo')
+      .populate('ticketId', 'ticketNumber priority')
+      .lean()
+      .exec();
+
+    if (!task) {
+      return { success: true, message: 'Active task fetched successfully', data: null };
+    }
+
+    const { ticketId, ...rest } = task as any;
+    return {
+      success: true,
+      message: 'Active task fetched successfully',
+      data: { ...rest, ticket: ticketId ?? null },
+    };
+  }
+}
