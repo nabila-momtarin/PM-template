@@ -582,6 +582,22 @@ export class TicketService {
         throw new NotFoundException('Ticket not found');
       }
 
+      // Check for any non-completed task still linked to this ticket
+      const incompleteTask = await this.taskModel
+        .findOne({
+          ticketId: new Types.ObjectId(ticketId),
+          isDeleted: false,
+          status: { $ne: 'Completed' },
+        })
+        .lean();
+
+      if (incompleteTask) {
+        this.logger.error(`Ticket ${ticketId} has incomplete task(s), cannot move to Developed`);
+        throw new BadRequestException(
+          'All tasks must be completed before moving the ticket to Developed',
+        );
+      }
+
       const updatedTicketDeveloped = await this.ticketRepository.updateByID(
         ticketId,
         {
