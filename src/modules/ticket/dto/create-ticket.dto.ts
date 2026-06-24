@@ -34,7 +34,8 @@ export class CreateTicketDto {
 
   @Type(() => Date)
   @IsDate()
-  @IsNotEmpty()
+  // @IsNotEmpty()
+  @IsOptional()
   dueDate: Date;
 
   // @IsArray()

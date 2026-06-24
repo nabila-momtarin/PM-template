@@ -1,3 +1,4 @@
+import { Transform } from "class-transformer";
 import { Allow, IsArray, IsEnum, IsMongoId, IsOptional, IsString, IsUrl, MinLength } from "class-validator";
 import { TicketPriority, TicketType } from "src/common/enums/ticket.enum";
 
@@ -25,6 +26,10 @@ export class UpdateTicketDto {
     priority?: TicketPriority;
 
 
+    @Transform(({ value }) => {
+      if (value === undefined || value === null) return value;
+      return Array.isArray(value) ? value : [value];
+    })
     @IsOptional()
     @IsArray()
     projects?: string[];

@@ -39,8 +39,8 @@ export class Ticket {
   @Prop({ type: [{ type: Types.ObjectId, ref: MODEL_NAMES.PROJECT }], default: [] })
   projects: Types.ObjectId[];
 
-  @Prop({ type: Date, required: true })
-  dueDate: Date;
+  @Prop({ type: Date/* , required: true  */})
+  dueDate?: Date;
 
   @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER, required: true })
   createdBy: Types.ObjectId;

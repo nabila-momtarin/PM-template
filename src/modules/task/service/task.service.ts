@@ -53,6 +53,15 @@ export class TaskService {
         this.logger.error('Ticket not found');
         throw new NotFoundException('Ticket not found');
       }
+
+      // ── Guard: ticket must have a due date before any task can be created ──
+      if (!ticket.dueDate) {
+        this.logger.error(`Ticket ${dto.ticketId} has no due date — cannot create task`);
+        throw new BadRequestException(
+          'The associated ticket must have a due date before a task can be created',
+        );
+      }
+
       // ── Validate project exists (non-deleted) ──
       const project = await this.projectModel
         .findOne({ _id: dto.projectId, isDeleted: { $ne: true } })
