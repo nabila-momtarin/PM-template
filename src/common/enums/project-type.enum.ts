@@ -1,4 +1,4 @@
-export enum ProjectType {
-    BACKEND = 'Backend',
-    FRONTEND = 'Frontend'
-}
+// export enum ProjectType {
+//     BACKEND = 'Backend',
+//     FRONTEND = 'Frontend'
+// }

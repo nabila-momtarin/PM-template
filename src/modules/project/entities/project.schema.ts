@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
-import { ProjectType } from "src/common/enums/project-type.enum";
+// import { ProjectType } from "src/common/enums/project-type.enum";
 
 
 export type ProjectDocument = HydratedDocument<Project>;
@@ -13,8 +13,8 @@ export class Project {
     @Prop({ type: String})
     description?: string;
 
-    @Prop({ type: String, enum: Object.values(ProjectType) })
-    type?: ProjectType;
+    // @Prop({ type: String, enum: Object.values(ProjectType) })
+    // type?: ProjectType;
 
     @Prop({ type: String})
     repositoryURL?: string;

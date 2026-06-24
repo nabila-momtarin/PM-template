@@ -1,12 +1,12 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
-import { ProjectType } from 'src/common/enums/project-type.enum';
+// import { ProjectType } from 'src/common/enums/project-type.enum';
 
 export class ProjectQueryDto extends PaginationQueryDto {
-  @IsOptional()
-  @IsEnum(ProjectType)
-  type?: ProjectType;
+  // @IsOptional()
+  // @IsEnum(ProjectType)
+  // type?: ProjectType;
 
   @IsOptional()
   @IsString()

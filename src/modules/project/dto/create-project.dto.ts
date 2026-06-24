@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString } from "class-validator";
-import { ProjectType } from "src/common/enums/project-type.enum";
+// import { ProjectType } from "src/common/enums/project-type.enum";
 
 
 export class CreateProjectDto {
@@ -10,8 +10,8 @@ export class CreateProjectDto {
     @IsOptional()
     description: string;
 
-    @IsEnum(ProjectType)
-    type: ProjectType;
+    // @IsEnum(ProjectType)
+    // type: ProjectType;
     
     @IsString()
     @IsOptional()
