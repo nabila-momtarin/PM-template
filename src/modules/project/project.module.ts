@@ -5,6 +5,7 @@ import { Project, ProjectSchema } from "./entities/project.schema";
 import { ProjectController } from "./controller/project.controller";
 import { ProjectService } from "./service/project.service";
 import { ProjectRepository } from "./repositroy/project.repository";
+import { TicketModule } from "../ticket/ticket.module";
 
 
 @Module({
@@ -12,7 +13,8 @@ import { ProjectRepository } from "./repositroy/project.repository";
         MongooseModule.forFeature([{ 
             name: Project.name, 
             schema: ProjectSchema 
-        }])
+        }]),
+        TicketModule,
     ],
     controllers: [ProjectController],
     providers: [ProjectService, ProjectRepository],

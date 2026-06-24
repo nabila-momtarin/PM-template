@@ -17,6 +17,6 @@ import { Task, TaskSchema } from '../task/entities/task.schema';
   ],
   controllers: [ TicketController ],
   providers: [ TicketService, TicketRepository,  CounterService ],
-  exports: [],
+  exports: [TicketRepository],
 })
 export class TicketModule {} 

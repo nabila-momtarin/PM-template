@@ -1,19 +1,25 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from '../repositroy/project.repository';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { UpdateProjectDto } from '../dto/update-project.dto';
 import { ProjectQueryDto } from '../dto/getAll-project.dto';
 import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 import { Types } from 'mongoose';
-
+import { TicketRepository } from 'src/modules/ticket/repositroy/ticket.repository';
 
 @Injectable()
 export class ProjectService {
-  constructor(private readonly projectRepository: ProjectRepository) { }
+  constructor(
+    private readonly projectRepository: ProjectRepository,
+    private readonly ticketRepository: TicketRepository,
+  ) {}
 
   private readonly logger = new Logger(ProjectService.name);
 
-  async create(createProjectDto: CreateProjectDto, currentUser: AuthenticatedUser) /* : Promise<ProjectDocument>  */ {
+  async create(
+    createProjectDto: CreateProjectDto,
+    currentUser: AuthenticatedUser,
+  ) /* : Promise<ProjectDocument>  */ {
     this.logger.debug('..');
 
     try {
@@ -36,7 +42,6 @@ export class ProjectService {
     }
   }
 
-
   async findAll(query: ProjectQueryDto) {
     this.logger.debug('..');
 
@@ -49,8 +54,7 @@ export class ProjectService {
         sortStr: query.sort ?? '-createdAt',
         page: String(query.page ?? 1),
         length: String(query.limit ?? query.length ?? 10),
-        filterableFields: ['type', 'title']
-
+        filterableFields: ['type', 'title'],
       });
 
       // console.log("projects: SERVICE: ", projects);
@@ -60,7 +64,7 @@ export class ProjectService {
         success: true,
         message: 'Projects fetched successfully',
         data: projects.data,
-        pagination: projects.pagination
+        pagination: projects.pagination,
       };
     } catch (err) {
       this.logger.error('ProjectService.findAll failed', err instanceof Error ? err.stack : err);
@@ -92,7 +96,7 @@ export class ProjectService {
 
     try {
       const project = await this.projectRepository.findById({
-        id: projectId
+        id: projectId,
       });
 
       if (!project) {
@@ -108,18 +112,45 @@ export class ProjectService {
         data: project,
       };
     } catch (err) {
-      this.logger.error('ProjectService.getProjectById failed', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'ProjectService.getProjectById failed',
+        err instanceof Error ? err.stack : err,
+      );
       throw err;
     }
   }
 
-
   async deleteByIdProject(projectId: string, currentUser: AuthenticatedUser) {
-    // console.log('Project SERVICE: deleteByIdProject\n');
+    console.log('🔥 DELETE CALLED FOR PROJECT:', projectId);
     this.logger.debug('..');
-
+console.log('🧩 ticketRepository exists?', !!this.ticketRepository);
+  console.log('🧩 ticketRepository model name:', this.ticketRepository?.getModel()?.modelName);
+  console.log('🧩 ticketRepository db name:', this.ticketRepository?.getModel()?.db?.name);
     try {
       // const projectToDelete = await this.projectRepository.deleteById(projectId);
+
+      if (!Types.ObjectId.isValid(projectId)) {
+        this.logger.error('Invalid project id');
+        throw new BadRequestException('Invalid project id');
+      }
+
+      // Check if any non-deleted ticket is associated with this project
+      const linkedTicket = await this.ticketRepository.findOne({
+        filters: {
+          projects: new Types.ObjectId(projectId),
+          isDeleted: false,
+        },
+      });
+
+      console.log('🔍 LINKED TICKET RESULT:', linkedTicket);
+      this.logger.debug(`Linked Ticket Result: SERVICE: ${linkedTicket}`);
+
+      if (linkedTicket) {
+        this.logger.error(`Project ${projectId} is linked to ticket(s), cannot delete`);
+        throw new BadRequestException(
+          'Project cannot be deleted because it is associated with one or more tickets',
+        );
+      }
 
       const deletedProject = await this.projectRepository.softDeleteById(
         projectId,
@@ -144,18 +175,19 @@ export class ProjectService {
         message: 'Project deleted successfully',
         data: {
           id: projectId,
-          title: deletedProject.title
-        }
-
+          title: deletedProject.title,
+        },
       };
     } catch (err) {
-      this.logger.error('ProjectService.deleteByIdProject failed', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'ProjectService.deleteByIdProject failed',
+        err instanceof Error ? err.stack : err,
+      );
       throw err;
     }
   }
 
   async updateProject(projectId: string, updateProjectDto: UpdateProjectDto) {
-
     this.logger.debug('..');
 
     try {
@@ -167,10 +199,7 @@ export class ProjectService {
       //   throw new NotFoundException('No updates provided');
       // }
 
-      const updatedProject = await this.projectRepository.updateByID(
-        projectId,
-        updateProjectDto
-      );
+      const updatedProject = await this.projectRepository.updateByID(projectId, updateProjectDto);
 
       if (!updatedProject) {
         // console.log('Project Not Found');
@@ -185,11 +214,13 @@ export class ProjectService {
         success: true,
         message: 'Project updated successfully',
         data: updatedProject,
-      }
+      };
     } catch (err) {
-      this.logger.error('ProjectService.updateProject failed', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'ProjectService.updateProject failed',
+        err instanceof Error ? err.stack : err,
+      );
       throw err;
     }
   }
-
 }
