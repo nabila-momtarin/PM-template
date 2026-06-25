@@ -9,8 +9,6 @@ import { User, UserDocument } from 'src/modules/user/entities/user.schema';
 
 @Injectable()
 export class SummaryService {
-  private readonly logger = new Logger(SummaryService.name);
-
   constructor(
     @InjectModel(User.name)   private readonly userModel: Model<UserDocument>,
     @InjectModel(Task.name)   private readonly taskModel: Model<TaskDocument>,
@@ -463,19 +461,11 @@ async getTicketSummary() {
       },
       {
         $facet: {
-          byPriority: [
-            { $group: { _id: '$ticketPriority', count: { $sum: 1 } } },
-          ],
-          byStatus: [
-            { $group: { _id: '$status', count: { $sum: 1 } } },
-          ],
+          total:      [{ $count: 'count' }],
+          byPriority: [{ $group: { _id: '$ticketPriority', count: { $sum: 1 } } }],
+          byStatus:   [{ $group: { _id: '$status',         count: { $sum: 1 } } }],
           overdue: [
-            {
-              $match: {
-                dueDate: { $lt: now },
-                status: { $ne: 'Completed' },
-              },
-            },
+            { $match: { dueDate: { $lt: now }, status: { $ne: 'Completed' } } },
             { $count: 'count' },
           ],
         },
@@ -493,6 +483,7 @@ async getTicketSummary() {
       success: true,
       message: 'Task summary fetched successfully',
       data: {
+        totalTasks: result.total?.[0]?.count ?? 0,
         priority: {
           low:       priorityMap['Low']       ?? 0,
           mid:       priorityMap['Medium']    ?? 0,
