@@ -52,7 +52,7 @@ export class SummaryController {
   }
 
   @SkipRbac()
-  @Get('me/worktime')
+  @Get('me/worktime-overview')
   getCurrentUserWorktimeOverview(
     @CurrentUser() user: AuthenticatedUser,
     @Query('startDate') startDate?: string,
