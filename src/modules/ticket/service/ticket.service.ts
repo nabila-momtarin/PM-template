@@ -515,6 +515,60 @@ export class TicketService {
     }
   }
 
+
+
+    async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
+    this.logger.log('BE HAPPY');
+    try {
+      this.logger.log(`ticketId: ${ticketId}`);
+
+      const existingTicket = await this.ticketRepository.findById({
+        id: ticketId,
+        useLean: true,
+      });
+
+      if (!existingTicket) {
+        this.logger.error('Ticket not found');
+        throw new NotFoundException('Ticket not found');
+      }
+
+      const updatedTicketToOpen = await this.ticketRepository.updateByID(
+        ticketId,
+        {
+          status: 'Open',
+          updatedBy: new Types.ObjectId(currentUser.userId),
+        },
+        {
+          useLean: true,
+          new: true,
+        },
+      );
+
+      if (!updatedTicketToOpen) {
+        this.logger.error('Ticket not found or deleted during update');
+        throw new NotFoundException('Ticket not found or deleted during update');
+      }
+      this.logger.log(updatedTicketToOpen);
+      return {
+        success: true,
+        message: 'Ticket status updated to Open',
+        data: {
+          _id: updatedTicketToOpen._id,
+          ticketNumber: updatedTicketToOpen.ticketNumber,
+          status: updatedTicketToOpen.status,
+          updatedAt: updatedTicketToOpen.updatedAt,
+          updatedBy: updatedTicketToOpen.updatedBy,
+        },
+      };
+    } catch (err) {
+      this.logger.error(
+        'TicketService.updateTicketToOpen failed',
+        err instanceof Error ? err.stack : err,
+      );
+      throw err;
+    }
+  }
+
   async updateTicketToInProgress(ticketId: string, currentUser: AuthenticatedUser) {
     this.logger.log('BE HAPPY');
     try {

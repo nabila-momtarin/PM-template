@@ -105,9 +105,6 @@ export class TicketController {
   }
 
 
-
-
-
   @Patch(':id/due-date')
   updateTicketDueDate(
     @Param('id') id: string,
@@ -129,6 +126,14 @@ export class TicketController {
 
     return this.ticketService.updateTicketQaStatus(id, dto, currentUser);
   }
+
+    @Patch(':id/change-status/open')
+  markOpen(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
+    this.logger.debug('KEEP GOING\n');
+
+    return this.ticketService.updateTicketToOpen(id, currentUser);
+  }
+
 
   @Patch(':id/change-status/in-progress')
   markInProgress(@Param('id') id: string, @CurrentUser() currentUser: AuthenticatedUser) {
