@@ -316,30 +316,6 @@ export const PERMISSIONS: PermissionCatalog = [
   // ── Dashboard: 10 ─────────────────────────────────────────
   {
     method: 'GET',
-    path: '/api/v1/dashboard/userSummary',
-    label: 'View user summary',
-    category: 'Dashboard',
-  },
-  {
-    method: 'GET',
-    path: '/api/v1/dashboard/ticketSummary',
-    label: 'View ticket summary',
-    category: 'Dashboard',
-  },
-  {
-    method: 'GET',
-    path: '/api/v1/dashboard/taskSummary',
-    label: 'View task summary',
-    category: 'Dashboard',
-  },
-  {
-    method: 'GET',
-    path: '/api/v1/dashboard/worktime-overview',
-    label: 'View worktime overview',
-    category: 'Dashboard',
-  },
-  {
-    method: 'GET',
     path: '/api/v1/dashboard/me/active-task',
     label: 'View my active task',
     category: 'Dashboard',
