@@ -313,6 +313,68 @@ export const PERMISSIONS: PermissionCatalog = [
   //   category: 'Admin',
   // },
 
+  // ── Dashboard: 10 ─────────────────────────────────────────
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/userSummary',
+    label: 'View user summary',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/ticketSummary',
+    label: 'View ticket summary',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/taskSummary',
+    label: 'View task summary',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/worktime-overview',
+    label: 'View worktime overview',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/active-task',
+    label: 'View my active task',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/active-ticket',
+    label: 'View my active ticket',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/task-summary',
+    label: 'View my task summary',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/ticket-summary',
+    label: 'View my ticket summary',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/tasks',
+    label: 'View my tasks',
+    category: 'Dashboard',
+  },
+  {
+    method: 'GET',
+    path: '/api/v1/dashboard/me/worktime',
+    label: 'View my worktime overview',
+    category: 'Dashboard',
+  },
+
   // ── Roles: 5 ───────────────────────────────────────────────
   {
     method: 'POST',

@@ -21,11 +21,11 @@ export class SummaryService {
   // USER SUMMARY
   // ─────────────────────────────────────────
   async getUserSummary() {
+    const now = new Date();
+
     const results = await this.userModel.aggregate([
-      // Step 1 — only active users
       { $match: { isDeleted: false } },
 
-      // Step 2 — lookup all tasks assigned to each user
       {
         $lookup: {
           from: 'tasks',
@@ -40,18 +40,10 @@ export class SummaryService {
         },
       },
 
-      // Step 3 — unwind tasks (keep users with no tasks)
       { $unwind: { path: '$tasks', preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: '$tasks.worktime', preserveNullAndEmptyArrays: true } },
 
-      // Step 4 — unwind worktime entries per task
-      {
-        $unwind: {
-          path: '$tasks.worktime',
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-
-      // Step 5 — group by user + task to get per-task worktime ms
+      // Group by user + task
       {
         $group: {
           _id: { userId: '$_id', taskId: '$tasks._id' },
@@ -60,6 +52,8 @@ export class SummaryService {
           estimatedTime: { $first: '$tasks.estimatedTime' },
           taskStatus:    { $first: '$tasks.status' },
           taskTitle:     { $first: '$tasks.title' },
+          taskDueDate:   { $first: '$tasks.dueDate' },
+          taskTicketId:  { $first: '$tasks.ticketId' },
           worktimeMs: {
             $sum: {
               $cond: {
@@ -77,7 +71,7 @@ export class SummaryService {
         },
       },
 
-      // Step 6 — group by user to get totals
+      // Group by user
       {
         $group: {
           _id: '$_id.userId',
@@ -87,16 +81,25 @@ export class SummaryService {
           totalWorktimeMs:    { $sum: '$worktimeMs' },
           totalTaskCount:     { $sum: { $cond: [{ $ifNull: ['$_id.taskId', false] }, 1, 0] } },
           completedTaskCount: {
+            $sum: { $cond: [{ $eq: ['$taskStatus', 'Completed'] }, 1, 0] },
+          },
+          overDueTaskCount: {
             $sum: {
-              $cond: [{ $eq: ['$taskStatus', 'Completed'] }, 1, 0],
+              $cond: [
+                { $and: [
+                  { $ifNull: ['$taskDueDate', false] },
+                  { $lt: ['$taskDueDate', now] },
+                  { $ne: ['$taskStatus', 'Completed'] },
+                ]},
+                1, 0,
+              ],
             },
           },
-          // running task = first In Progress task
           runningTask: {
             $max: {
               $cond: [
                 { $eq: ['$taskStatus', 'In Progress'] },
-                { id: '$_id.taskId', name: '$taskTitle' },
+                { id: '$_id.taskId', name: '$taskTitle', ticketId: '$taskTicketId' },
                 null,
               ],
             },
@@ -104,7 +107,26 @@ export class SummaryService {
         },
       },
 
-      // Step 7 — shape final output
+      // Lookup the ticket linked to the running task
+      {
+        $lookup: {
+          from: 'tickets',
+          let: { ticketId: '$runningTask.ticketId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $and: [
+                  { $eq: ['$_id', '$$ticketId'] },
+                  { $eq: ['$isDeleted', false] },
+                ]},
+              },
+            },
+            { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1 } },
+          ],
+          as: 'ticketData',
+        },
+      },
+
       {
         $project: {
           _id: 0,
@@ -113,21 +135,43 @@ export class SummaryService {
           photo:              1,
           totalTaskCount:     1,
           completedTaskCount: 1,
-          runningTask:        1,
-          estimatedTime:      '$totalEstimatedMins',
-          workTime:           '$totalWorktimeMs',
+          overDueTaskCount:   1,
+          runningTask: {
+            $cond: {
+              if: { $ifNull: ['$runningTask.id', false] },
+              then: { id: '$runningTask.id', name: '$runningTask.name' },
+              else: null,
+            },
+          },
+          estimatedTime: '$totalEstimatedMins',
+          workTime:      '$totalWorktimeMs',
+          ticket: {
+            $let: {
+              vars: { t: { $arrayElemAt: ['$ticketData', 0] } },
+              in: {
+                $cond: {
+                  if: { $ifNull: ['$$t', false] },
+                  then: {
+                    id:           '$$t._id',
+                    ticketNumber: '$$t.ticketNumber',
+                    title:        '$$t.title',
+                    priority:     '$$t.priority',
+                    dueDate:      '$$t.dueDate',
+                  },
+                  else: null,
+                },
+              },
+            },
+          },
         },
       },
     ]);
 
-    // Format times in application layer
     const data = results.map((u) => ({
       ...u,
       estimatedTime: minsToHHMM(u.estimatedTime ?? 0),
       workTime:      msToHHMM(u.workTime ?? 0),
     }));
-
-    this.logger.debug(`User summary: ${JSON.stringify(data)}`);
 
     return {
       success: true,
@@ -452,7 +496,6 @@ async getTicketSummary() {
       },
       {
         $facet: {
-          total: [{ $count: 'count' }],
           byPriority: [
             { $group: { _id: '$ticketPriority', count: { $sum: 1 } } },
           ],
@@ -483,7 +526,6 @@ async getTicketSummary() {
       success: true,
       message: 'Task summary fetched successfully',
       data: {
-        totalTasks: result.total?.[0]?.count ?? 0,
         priority: {
           low:       priorityMap['Low']       ?? 0,
           mid:       priorityMap['Medium']    ?? 0,

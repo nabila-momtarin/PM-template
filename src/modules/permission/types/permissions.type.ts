@@ -4,7 +4,8 @@ export type PermissionCategory =
   | 'Projects'
   | 'Tasks'
   | 'Admin'
-  | 'Role';
+  | 'Role'
+  | 'Dashboard';
 
 
 export type PermissionMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
