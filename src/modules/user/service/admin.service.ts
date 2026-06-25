@@ -247,9 +247,9 @@ export class AdminService {
       });
       if (!callerRole?.isSuperAdmin) throw new ForbiddenException('Access denied');
 
-      if (id === currentUser.userId) {
-        throw new BadRequestException('Use PATCH /api/v1/me to update your own profile');
-      }
+      // if (id === currentUser.userId) {
+      //   throw new BadRequestException('Use PATCH /api/v1/me to update your own profile');
+      // }
 
       const userExist = await this.userRepository.findById({ id, useLean: true });
 
