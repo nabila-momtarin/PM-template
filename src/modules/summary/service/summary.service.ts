@@ -189,33 +189,14 @@ async getTicketSummary() {
 
     {
       $facet: {
-        // ── Priority counts ──
-        byPriority: [
-          { $group: { _id: '$priority', count: { $sum: 1 } } },
-        ],
-
-        // ── Status counts ──
-        byStatus: [
-          { $group: { _id: '$status', count: { $sum: 1 } } },
-        ],
-
-        // ── Total tickets ──
-        total: [
-          { $count: 'count' },
-        ],
-
-        // ── Overdue: dueDate < now AND status != Closed ──
+        byPriority:  [{ $group: { _id: '$priority',    count: { $sum: 1 } } }],
+        byStatus:    [{ $group: { _id: '$status',      count: { $sum: 1 } } }],
+        byType:      [{ $group: { _id: '$ticketType',  count: { $sum: 1 } } }],
+        total:       [{ $count: 'count' }],
         overdue: [
-          {
-            $match: {
-              dueDate: { $lt: now },
-              status: { $ne: 'Closed' },
-            },
-          },
+          { $match: { dueDate: { $lt: now }, status: { $ne: 'Closed' } } },
           { $count: 'count' },
         ],
-
-        // ── Time totals from linked tasks ──
         timeTotals: [
           {
             $lookup: {
@@ -262,116 +243,102 @@ async getTicketSummary() {
     },
   ]);
 
-  // ── Helper to extract counts ──
   const priorityMap = Object.fromEntries(
-    (result.byPriority ?? []).map((p: any) => [p._id, p.count])
+    (result.byPriority ?? []).map((p: any) => [p._id, p.count]),
   );
   const statusMap = Object.fromEntries(
-    (result.byStatus ?? []).map((s: any) => [s._id, s.count])
+    (result.byStatus ?? []).map((s: any) => [s._id, s.count]),
   );
-
+  const typeMap = Object.fromEntries(
+    (result.byType ?? []).map((t: any) => [(t._id as string)?.toLowerCase(), t.count]),
+  );
   const timeTotals = result.timeTotals?.[0];
 
   return {
     success: true,
     message: 'Ticket summary fetched successfully',
     data: {
-      totalTicket:           result.total?.[0]?.count          ?? 0,
-      totalLow:              priorityMap['Low']                 ?? 0,
-      totalMedium:           priorityMap['Medium']              ?? 0,
-      totalHigh:             priorityMap['High']                ?? 0,
-      totalEmergency:        priorityMap['Emergency']           ?? 0,
-      totalOpen:             statusMap['Open']                  ?? 0,
-      totalInProgress:       statusMap['In Progress']           ?? 0,
-      totalDeveloped:        statusMap['Developed']             ?? 0,
-      totalQAInProgress:     statusMap['QA In Progress']        ?? 0,
-      totalReadyForRelease:  statusMap['Ready for Release']     ?? 0,
-      totalReleased:         statusMap['Released']              ?? 0,
-      totalClosed:           statusMap['Closed']                ?? 0,
-      totalOverdue:          result.overdue?.[0]?.count         ?? 0,
-      totalEstimatedTime:    minsToHHMM(timeTotals?.totalEstimatedMins ?? 0),
-      totalWorkTime:         msToHHMM(timeTotals?.totalWorktimeMs      ?? 0),
-    },
-  };
-}
-
- async getTaskSummary() {
-  const now = new Date();
-
-  const [result] = await this.taskModel.aggregate([
-    { $match: { isDeleted: false } },
-
-    {
-      $facet: {
-        // ── Status counts ──
-        byStatus: [
-          { $group: { _id: '$status', count: { $sum: 1 } } },
-        ],
-
-        // ── Total tasks ──
-        total: [
-          { $count: 'count' },
-        ],
-
-        // ── Overdue: dueDate < now AND status != Completed ──
-        overdue: [
-          {
-            $match: {
-              dueDate: { $lt: now },
-              status: { $ne: 'Completed' },
-            },
-          },
-          { $count: 'count' },
-        ],
-
-        // ── Time totals from worktime entries ──
-        timeTotals: [
-          { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
-          {
-            $group: {
-              _id: '$_id',
-              estimatedTime: { $first: '$estimatedTime' },
-              worktimeMs: {
-                $sum: {
-                  $subtract: [
-                    { $ifNull: ['$worktime.endTime', '$$NOW'] },
-                    '$worktime.startTime',
-                  ],
-                },
-              },
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              totalEstimatedMins: { $sum: { $ifNull: ['$estimatedTime', 0] } },
-              totalWorktimeMs:    { $sum: '$worktimeMs' },
-            },
-          },
-        ],
+      totalTicket: result.total?.[0]?.count ?? 0,
+      priority: {
+        totalLow:       priorityMap['Low']       ?? 0,
+        totalMedium:    priorityMap['Medium']    ?? 0,
+        totalHigh:      priorityMap['High']      ?? 0,
+        totalEmergency: priorityMap['Emergency'] ?? 0,
       },
-    },
-  ]);
-
-  const statusMap = Object.fromEntries(
-    (result.byStatus ?? []).map((s: any) => [s._id, s.count])
-  );
-  const timeTotals = result.timeTotals?.[0];
-
-  return {
-    success: true,
-    message: 'Task summary fetched successfully',
-    data: {
-      totalTask:          result.total?.[0]?.count   ?? 0,
-      totalTodo:          statusMap['Todo']           ?? 0,
-      totalInProgress:    statusMap['In Progress']    ?? 0,
-      totalCompleted:     statusMap['Completed']      ?? 0,
-      totalOverdue:       result.overdue?.[0]?.count  ?? 0,
+      statuses: {
+        totalOpen:             statusMap['Open']              ?? 0,
+        totalInProgress:       statusMap['In Progress']       ?? 0,
+        totalDeveloped:        statusMap['Developed']         ?? 0,
+        totalQAInProgress:     statusMap['QA In Progress']    ?? 0,
+        totalReadyForRelease:  statusMap['Ready for Release'] ?? 0,
+        totalReleased:         statusMap['Released']          ?? 0,
+        totalClosed:           statusMap['Closed']            ?? 0,
+        totalOverdue:          result.overdue?.[0]?.count     ?? 0,
+      },
+      ticketType: {
+        feature:     typeMap['feature']     ?? 0,
+        bug:         typeMap['bug']         ?? 0,
+        improvement: typeMap['improvement'] ?? 0,
+      },
       totalEstimatedTime: minsToHHMM(timeTotals?.totalEstimatedMins ?? 0),
       totalWorkTime:      msToHHMM(timeTotals?.totalWorktimeMs      ?? 0),
     },
   };
 }
+
+  async getTaskSummary() {
+    const now = new Date();
+
+    const [result] = await this.taskModel.aggregate([
+      { $match: { isDeleted: false } },
+      {
+        $lookup: {
+          from: 'tickets',
+          localField: 'ticketId',
+          foreignField: '_id',
+          as: 'ticket',
+          pipeline: [{ $project: { _id: 0, priority: 1 } }],
+        },
+      },
+      { $addFields: { ticketPriority: { $arrayElemAt: ['$ticket.priority', 0] } } },
+      {
+        $facet: {
+          byPriority: [{ $group: { _id: '$ticketPriority', count: { $sum: 1 } } }],
+          byStatus:   [{ $group: { _id: '$status',         count: { $sum: 1 } } }],
+          overdue: [
+            { $match: { dueDate: { $lt: now }, status: { $ne: 'Completed' } } },
+            { $count: 'count' },
+          ],
+        },
+      },
+    ]);
+
+    const priorityMap = Object.fromEntries(
+      (result.byPriority ?? []).map((p: any) => [p._id, p.count]),
+    );
+    const statusMap = Object.fromEntries(
+      (result.byStatus ?? []).map((s: any) => [s._id, s.count]),
+    );
+
+    return {
+      success: true,
+      message: 'Task summary fetched successfully',
+      data: {
+        priority: {
+          low:       priorityMap['Low']       ?? 0,
+          mid:       priorityMap['Medium']    ?? 0,
+          high:      priorityMap['High']      ?? 0,
+          emergency: priorityMap['Emergency'] ?? 0,
+        },
+        statuses: {
+          toDo:       statusMap['Todo']          ?? 0,
+          overdue:    result.overdue?.[0]?.count ?? 0,
+          inProgress: statusMap['In Progress']   ?? 0,
+          completed:  statusMap['Completed']     ?? 0,
+        },
+      },
+    };
+  }
 
   async getCurrentUserTicketSummary(userId: string) {
     const TICKET_STATUS_ORDER = [
