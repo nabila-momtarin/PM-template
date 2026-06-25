@@ -1,4 +1,4 @@
-import { Exclude, Transform } from "class-transformer";
+import {  Transform } from "class-transformer";
 import { MinLength, MaxLength, IsNotEmpty, IsString, IsEmail, IsStrongPassword, IsMongoId, IsOptional, Matches, IsUrl } from "class-validator";
 
 export class CreateUserDto {
@@ -25,6 +25,9 @@ export class CreateUserDto {
        }) */
     email: string;
 
+    // @Transform(({ value }) =>
+    //     typeof value === 'string' ? value.trim() : value,
+    // )
     @IsNotEmpty()
     @IsString()
     @IsStrongPassword({

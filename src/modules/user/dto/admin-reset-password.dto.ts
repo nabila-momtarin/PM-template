@@ -1,19 +1,24 @@
-import { IsNotEmpty, IsString, IsStrongPassword } from "class-validator";
+import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsString, IsStrongPassword } from 'class-validator';
+
+// const trimValue = ({ value }: { value: unknown }) =>
+//   typeof value === 'string' ? value.trim() : value;
 
 export class ResetPasswordDto {
+//   @Transform(trimValue)
+  @IsNotEmpty()
+  @IsString()
+  @IsStrongPassword({
+    minLength: 8,
+    minLowercase: 0,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+  })
+  newPassword: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @IsStrongPassword({
-        minLength: 8,
-        minLowercase: 0,
-        minUppercase: 1,
-        minNumbers: 1,
-        minSymbols: 1,
-    })
-    newPassword: string;
-
-    @IsNotEmpty()
-    @IsString()
-    confirmPassword: string;
+//   @Transform(trimValue)
+  @IsNotEmpty()
+  @IsString()
+  confirmPassword: string;
 }
