@@ -5,6 +5,7 @@ import { User, UserSchema } from '../user/entities/user.schema';
 import { Task, TaskSchema } from '../task/entities/task.schema';
 import { Ticket, TicketSchema } from '../ticket/entities/ticket.schema';
 import { SummaryService } from './service/summary.service';
+import { SummaryRepository } from './repositroy/summary.repository';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { SummaryService } from './service/summary.service';
     ]),
   ],
   controllers: [SummaryController],
-  providers: [SummaryService],
+  providers: [SummaryRepository, SummaryService],
 })
 export class SummaryModule {}

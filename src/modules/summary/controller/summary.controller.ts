@@ -10,20 +10,20 @@ export class SummaryController {
 
   @SkipRbac()
   @Get('userSummary')
-  getUserSummary() {
-    return this.summaryService.getUserSummary();
+  getUserSummary(@Query('filter') filter?: string) {
+    return this.summaryService.getUserSummary(filter);
   }
 
   @SkipRbac()
   @Get('ticketSummary')
-  getTicketSummary() {
-    return this.summaryService.getTicketSummary();
+  getTicketSummary(@Query('filter') filter?: string) {
+    return this.summaryService.getTicketSummary(filter);
   }
 
   @SkipRbac()
   @Get('taskSummary')
-  getTaskSummary() {
-    return this.summaryService.getTaskSummary();
+  getTaskSummary(@Query('filter') filter?: string) {
+    return this.summaryService.getTaskSummary(filter);
   }
 
   @SkipRbac()
