@@ -14,6 +14,7 @@ import { CounterService } from 'src/common/services/counter.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Task, TaskDocument } from 'src/modules/task/entities/task.schema';
 import { minsToHHMM, msToHHMM } from 'src/common/utils/time.utils';
+import { TicketQAStatus, TicketStatus  } from 'src/common/enums/ticket.enum';
 
 @Injectable()
 export class TicketService {
@@ -25,15 +26,167 @@ export class TicketService {
 
   private readonly logger = new Logger(TicketService.name);
 
-  // private async generateTicketNumber(): Promise<string> {
-  //   const totalTickets = await this.ticketRepository.countDocuments();
-
-  //   return `TKT-${totalTickets + 1}`;
-  // }
-
   private async generateTicketNumber(): Promise<string> {
     const seq = await this.counterService.generate('ticketCounter');
     return `TKT-${seq}`;
+  }
+
+// ─────────────────────────────────────────────────────────────
+  // NEW: shared rule resolver for QA-status auto-update
+  // Source-aware: depends on the CURRENT status, not just the target.
+  // Rules (from product spec / ticket transition image):
+  //   1. Developed        → QA In Progress                          => Not Tested
+  //   2. QA In Progress    → Ready for Release / Released / Closed    => Passed
+  //   3. QA In Progress    → Open                                     => Failed
+  //   4. QA In Progress    → Developed / In Progress                  => Not Tested
+  //   5. Developed         → Any other column (catch-all)             => Not Tested
+  // ─────────────────────────────────────────────────────────────
+ private resolveAutoQaStatus(
+    currentStatus: TicketStatus | undefined,
+    targetStatus: TicketStatus,
+  ): TicketQAStatus | undefined {
+    if (currentStatus === TicketStatus.DEVELOPED && targetStatus === TicketStatus.QA_IN_PROGRESS) {
+      return TicketQAStatus.NOT_TESTED;
+    }
+ 
+    if (
+      currentStatus === TicketStatus.QA_IN_PROGRESS &&
+      [TicketStatus.READY_FOR_RELEASE, TicketStatus.RELEASED, TicketStatus.CLOSED].includes(
+        targetStatus,
+      )
+    ) {
+      return TicketQAStatus.PASSED;
+    }
+ 
+    if (currentStatus === TicketStatus.QA_IN_PROGRESS && targetStatus === TicketStatus.OPEN) {
+      return TicketQAStatus.FAILED;
+    }
+ 
+    if (
+      currentStatus === TicketStatus.QA_IN_PROGRESS &&
+      [TicketStatus.DEVELOPED, TicketStatus.IN_PROGRESS].includes(targetStatus)
+    ) {
+      return TicketQAStatus.NOT_TESTED;
+    }
+ 
+    if (currentStatus === TicketStatus.DEVELOPED && targetStatus !== TicketStatus.DEVELOPED) {
+      return TicketQAStatus.NOT_TESTED;
+    }
+ 
+    return undefined;
+  }
+ 
+  // ─────────────────────────────────────────────────────────────
+  // Precondition check — only applies when transitioning TO 'Developed'.
+  // Throws BadRequestException if any non-deleted, non-completed task is still linked to this ticket.
+  // ─────────────────────────────────────────────────────────────
+  private async assertNoIncompleteTasks(ticketId: string): Promise<void> {
+    const incompleteTask = await this.taskModel
+      .findOne({
+        ticketId: new Types.ObjectId(ticketId),
+        isDeleted: false,
+        status: { $ne: 'Completed' },
+      })
+      .lean();
+ 
+    if (incompleteTask) {
+      this.logger.error(`Ticket ${ticketId} has incomplete task(s), cannot move to Developed`);
+      throw new BadRequestException(
+        'All tasks must be completed before moving the ticket to Developed',
+      );
+    }
+  }
+ 
+  // ─────────────────────────────────────────────────────────────
+  // SHARED — used by all 7 change-status transitions:
+  //   1. fetch ticket + not-found check
+  //   2. run transition-specific precondition checks, if any
+  //      (currently only 'Developed' has one — see assertNoIncompleteTasks)
+  //   3. resolve qaStatus auto-update rule based on current status
+  //
+  // Controller routes (ticket.controller.ts) are UNCHANGED — all 7
+  // @Patch('change-status/...') endpoints + RBAC permission paths
+  // still map to these exact same method names/signatures.
+  //
+  // NOTE: if a future transition needs its own precondition check,
+  // add another `if (targetStatus === '...')` branch below, following
+  // the same pattern as the 'Developed' branch.
+  // ─────────────────────────────────────────────────────────────
+   private async getTicketAndResolveQaStatus(ticketId: string, targetStatus: TicketStatus) {
+    const existingTicket = await this.ticketRepository.findById({
+      id: ticketId,
+      useLean: true,
+    });
+ 
+    if (!existingTicket) {
+      this.logger.error('Ticket not found');
+      throw new NotFoundException('Ticket not found');
+    }
+ 
+    if (targetStatus === TicketStatus.DEVELOPED) {
+      await this.assertNoIncompleteTasks(ticketId);
+    }
+ 
+    const autoQaStatus = this.resolveAutoQaStatus(existingTicket.status, targetStatus);
+ 
+    return { existingTicket, autoQaStatus };
+  }
+ 
+  // ─────────────────────────────────────────────────────────────
+  // All 7 transitions below share the exact same shape:
+  //   fetch + precondition + qaStatus resolve -> update -> shape response
+  // Only the targetStatus  and response message differ.
+  // ─────────────────────────────────────────────────────────────
+ private async applyStatusChange(
+    ticketId: string,
+    targetStatus: TicketStatus,
+    currentUser: AuthenticatedUser,
+  ) {
+    this.logger.log('BE HAPPY');
+    try {
+      this.logger.log(`ticketId: ${ticketId}`);
+ 
+      const { autoQaStatus } = await this.getTicketAndResolveQaStatus(ticketId, targetStatus);
+ 
+      const updatedTicket = await this.ticketRepository.updateByID(
+        ticketId,
+        {
+          status: targetStatus,
+          ...(autoQaStatus && { qaStatus: autoQaStatus }),
+          updatedBy: new Types.ObjectId(currentUser.userId),
+        },
+        {
+          useLean: true,
+          new: true,
+        },
+      );
+ 
+      if (!updatedTicket) {
+        this.logger.error('Ticket not found or deleted during update');
+        throw new NotFoundException('Ticket not found or deleted during update');
+      }
+ 
+      this.logger.log(updatedTicket);
+ 
+      return {
+        success: true,
+        message: `Ticket status updated to ${targetStatus}`,
+        data: {
+          _id: updatedTicket._id,
+          ticketNumber: updatedTicket.ticketNumber,
+          status: updatedTicket.status,
+          qaStatus: updatedTicket.qaStatus,
+          updatedAt: updatedTicket.updatedAt,
+          updatedBy: updatedTicket.updatedBy,
+        },
+      };
+    } catch (err) {
+      this.logger.error(
+        `TicketService.applyStatusChange (${targetStatus}) failed`,
+        err instanceof Error ? err.stack : err,
+      );
+      throw err;
+    }
   }
 
   async createTicket(
@@ -517,384 +670,418 @@ export class TicketService {
 
 
 
-    async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
+  //   async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
 
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
 
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
 
-      const updatedTicketToOpen = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'Open',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
+  //     const updatedTicketToOpen = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'Open',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
 
-      if (!updatedTicketToOpen) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketToOpen);
-      return {
-        success: true,
-        message: 'Ticket status updated to Open',
-        data: {
-          _id: updatedTicketToOpen._id,
-          ticketNumber: updatedTicketToOpen.ticketNumber,
-          status: updatedTicketToOpen.status,
-          updatedAt: updatedTicketToOpen.updatedAt,
-          updatedBy: updatedTicketToOpen.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToOpen failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+  //     if (!updatedTicketToOpen) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketToOpen);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to Open',
+  //       data: {
+  //         _id: updatedTicketToOpen._id,
+  //         ticketNumber: updatedTicketToOpen.ticketNumber,
+  //         status: updatedTicketToOpen.status,
+  //         updatedAt: updatedTicketToOpen.updatedAt,
+  //         updatedBy: updatedTicketToOpen.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToOpen failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToInProgress(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     const updatedTicketInProgress = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'In Progress',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketInProgress) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketInProgress);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to In Progress',
+  //       data: {
+  //         _id: updatedTicketInProgress._id,
+  //         ticketNumber: updatedTicketInProgress.ticketNumber,
+  //         status: updatedTicketInProgress.status,
+  //         updatedAt: updatedTicketInProgress.updatedAt,
+  //         updatedBy: updatedTicketInProgress.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToInProgress failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToDeveloped(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     // Check for any non-completed task still linked to this ticket
+  //     const incompleteTask = await this.taskModel
+  //       .findOne({
+  //         ticketId: new Types.ObjectId(ticketId),
+  //         isDeleted: false,
+  //         status: { $ne: 'Completed' },
+  //       })
+  //       .lean();
+
+  //     if (incompleteTask) {
+  //       this.logger.error(`Ticket ${ticketId} has incomplete task(s), cannot move to Developed`);
+  //       throw new BadRequestException(
+  //         'All tasks must be completed before moving the ticket to Developed',
+  //       );
+  //     }
+
+  //     const updatedTicketDeveloped = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'Developed',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketDeveloped) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketDeveloped);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to Developed',
+  //       data: {
+  //         _id: updatedTicketDeveloped._id,
+  //         ticketNumber: updatedTicketDeveloped.ticketNumber,
+  //         status: updatedTicketDeveloped.status,
+  //         updatedAt: updatedTicketDeveloped.updatedAt,
+  //         updatedBy: updatedTicketDeveloped.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToDeveloped failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     const updatedTicketQaInProgress = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'QA In Progress',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketQaInProgress) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketQaInProgress);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to QA In Progress',
+  //       data: {
+  //         _id: updatedTicketQaInProgress._id,
+  //         ticketNumber: updatedTicketQaInProgress.ticketNumber,
+  //         status: updatedTicketQaInProgress.status,
+  //         updatedAt: updatedTicketQaInProgress.updatedAt,
+  //         updatedBy: updatedTicketQaInProgress.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToQaInProgress failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     const updatedTicketReadyForRelease = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'Ready for Release',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketReadyForRelease) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketReadyForRelease);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to Ready for Release',
+  //       data: {
+  //         _id: updatedTicketReadyForRelease._id,
+  //         ticketNumber: updatedTicketReadyForRelease.ticketNumber,
+  //         status: updatedTicketReadyForRelease.status,
+  //         updatedAt: updatedTicketReadyForRelease.updatedAt,
+  //         updatedBy: updatedTicketReadyForRelease.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToReadyForRelease failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     const updatedTicketReleased = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'Released',
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketReleased) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketReleased);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to Released',
+  //       data: {
+  //         _id: updatedTicketReleased._id,
+  //         ticketNumber: updatedTicketReleased.ticketNumber,
+  //         status: updatedTicketReleased.status,
+  //         updatedAt: updatedTicketReleased.updatedAt,
+  //         updatedBy: updatedTicketReleased.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToReleased failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  // async updateTicketToClosed(ticketId: string, currentUser: AuthenticatedUser) {
+  //   this.logger.log('BE HAPPY');
+  //   try {
+  //     this.logger.log(`ticketId: ${ticketId}`);
+
+  //     const existingTicket = await this.ticketRepository.findById({
+  //       id: ticketId,
+  //       useLean: true,
+  //     });
+
+  //     if (!existingTicket) {
+  //       this.logger.error('Ticket not found');
+  //       throw new NotFoundException('Ticket not found');
+  //     }
+
+  //     const updatedTicketClosed = await this.ticketRepository.updateByID(
+  //       ticketId,
+  //       {
+  //         status: 'Closed',
+  //         // updatedBy: currentUser.userId.toString(),
+  //         updatedBy: new Types.ObjectId(currentUser.userId),
+  //       },
+  //       {
+  //         useLean: true,
+  //         new: true,
+  //       },
+  //     );
+
+  //     if (!updatedTicketClosed) {
+  //       this.logger.error('Ticket not found or deleted during update');
+  //       throw new NotFoundException('Ticket not found or deleted during update');
+  //     }
+  //     this.logger.log(updatedTicketClosed);
+  //     return {
+  //       success: true,
+  //       message: 'Ticket status updated to Closed',
+  //       data: {
+  //         _id: updatedTicketClosed._id,
+  //         ticketNumber: updatedTicketClosed.ticketNumber,
+  //         status: updatedTicketClosed.status,
+  //         updatedAt: updatedTicketClosed.updatedAt,
+  //         updatedBy: updatedTicketClosed.updatedBy,
+  //       },
+  //     };
+  //   } catch (err) {
+  //     this.logger.error(
+  //       'TicketService.updateTicketToClosed failed',
+  //       err instanceof Error ? err.stack : err,
+  //     );
+  //     throw err;
+  //   }
+  // }
+
+  
+  // ─────────────────────────────────────────────────────────────
+  // All 7 transitions delegate to the shared applyStatusChange().
+  // The 'Developed' precondition check (incomplete tasks) lives
+  // inside getTicketAndResolveQaStatus() — see comment there.
+  // ─────────────────────────────────────────────────────────────
+ async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
+    return this.applyStatusChange(ticketId, TicketStatus.OPEN, currentUser);
   }
-
+ 
   async updateTicketToInProgress(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      const updatedTicketInProgress = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'In Progress',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketInProgress) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketInProgress);
-      return {
-        success: true,
-        message: 'Ticket status updated to In Progress',
-        data: {
-          _id: updatedTicketInProgress._id,
-          ticketNumber: updatedTicketInProgress.ticketNumber,
-          status: updatedTicketInProgress.status,
-          updatedAt: updatedTicketInProgress.updatedAt,
-          updatedBy: updatedTicketInProgress.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToInProgress failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.IN_PROGRESS, currentUser);
   }
-
+ 
   async updateTicketToDeveloped(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      // Check for any non-completed task still linked to this ticket
-      const incompleteTask = await this.taskModel
-        .findOne({
-          ticketId: new Types.ObjectId(ticketId),
-          isDeleted: false,
-          status: { $ne: 'Completed' },
-        })
-        .lean();
-
-      if (incompleteTask) {
-        this.logger.error(`Ticket ${ticketId} has incomplete task(s), cannot move to Developed`);
-        throw new BadRequestException(
-          'All tasks must be completed before moving the ticket to Developed',
-        );
-      }
-
-      const updatedTicketDeveloped = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'Developed',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketDeveloped) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketDeveloped);
-      return {
-        success: true,
-        message: 'Ticket status updated to Developed',
-        data: {
-          _id: updatedTicketDeveloped._id,
-          ticketNumber: updatedTicketDeveloped.ticketNumber,
-          status: updatedTicketDeveloped.status,
-          updatedAt: updatedTicketDeveloped.updatedAt,
-          updatedBy: updatedTicketDeveloped.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToDeveloped failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.DEVELOPED, currentUser);
   }
-
+ 
   async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      const updatedTicketQaInProgress = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'QA In Progress',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketQaInProgress) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketQaInProgress);
-      return {
-        success: true,
-        message: 'Ticket status updated to QA In Progress',
-        data: {
-          _id: updatedTicketQaInProgress._id,
-          ticketNumber: updatedTicketQaInProgress.ticketNumber,
-          status: updatedTicketQaInProgress.status,
-          updatedAt: updatedTicketQaInProgress.updatedAt,
-          updatedBy: updatedTicketQaInProgress.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToQaInProgress failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.QA_IN_PROGRESS, currentUser);
   }
-
+ 
   async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      const updatedTicketReadyForRelease = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'Ready for Release',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketReadyForRelease) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketReadyForRelease);
-      return {
-        success: true,
-        message: 'Ticket status updated to Ready for Release',
-        data: {
-          _id: updatedTicketReadyForRelease._id,
-          ticketNumber: updatedTicketReadyForRelease.ticketNumber,
-          status: updatedTicketReadyForRelease.status,
-          updatedAt: updatedTicketReadyForRelease.updatedAt,
-          updatedBy: updatedTicketReadyForRelease.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToReadyForRelease failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.READY_FOR_RELEASE, currentUser);
   }
-
+ 
   async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      const updatedTicketReleased = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'Released',
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketReleased) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketReleased);
-      return {
-        success: true,
-        message: 'Ticket status updated to Released',
-        data: {
-          _id: updatedTicketReleased._id,
-          ticketNumber: updatedTicketReleased.ticketNumber,
-          status: updatedTicketReleased.status,
-          updatedAt: updatedTicketReleased.updatedAt,
-          updatedBy: updatedTicketReleased.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToReleased failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.RELEASED, currentUser);
   }
-
+ 
   async updateTicketToClosed(ticketId: string, currentUser: AuthenticatedUser) {
-    this.logger.log('BE HAPPY');
-    try {
-      this.logger.log(`ticketId: ${ticketId}`);
-
-      const existingTicket = await this.ticketRepository.findById({
-        id: ticketId,
-        useLean: true,
-      });
-
-      if (!existingTicket) {
-        this.logger.error('Ticket not found');
-        throw new NotFoundException('Ticket not found');
-      }
-
-      const updatedTicketClosed = await this.ticketRepository.updateByID(
-        ticketId,
-        {
-          status: 'Closed',
-          // updatedBy: currentUser.userId.toString(),
-          updatedBy: new Types.ObjectId(currentUser.userId),
-        },
-        {
-          useLean: true,
-          new: true,
-        },
-      );
-
-      if (!updatedTicketClosed) {
-        this.logger.error('Ticket not found or deleted during update');
-        throw new NotFoundException('Ticket not found or deleted during update');
-      }
-      this.logger.log(updatedTicketClosed);
-      return {
-        success: true,
-        message: 'Ticket status updated to Closed',
-        data: {
-          _id: updatedTicketClosed._id,
-          ticketNumber: updatedTicketClosed.ticketNumber,
-          status: updatedTicketClosed.status,
-          updatedAt: updatedTicketClosed.updatedAt,
-          updatedBy: updatedTicketClosed.updatedBy,
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'TicketService.updateTicketToClosed failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
+    return this.applyStatusChange(ticketId, TicketStatus.CLOSED, currentUser);
   }
 }
