@@ -52,11 +52,13 @@ export class SummaryService {
 
   constructor(private readonly summaryRepository: SummaryRepository) {}
 
-  async getUserSummary(filter?: string) {
+  async getUserSummary(filter?: string, startDate?: string, endDate?: string) {
     try {
       const now = new Date();
       const { userFilterMatch, taskFilterMatch } = splitUserSummaryFilter(filter);
-      const results = await this.summaryRepository.getUserSummaryAgg(userFilterMatch, taskFilterMatch, now);
+      const start = startDate ? new Date(startDate) : undefined;
+      const end   = endDate   ? new Date(endDate)   : undefined;
+      const results = await this.summaryRepository.getUserSummaryAgg(userFilterMatch, taskFilterMatch, now, start, end);
 
       const data = results.map((u) => ({
         ...u,
@@ -71,7 +73,7 @@ export class SummaryService {
     }
   }
 
-  async getTicketSummary(filter?: string) {
+  async getTicketSummary(filter?: string, startDate?: string, endDate?: string) {
     try {
       const now = new Date();
       const normalizedFilter = filter?.replace(/projectIds/g, 'projects');
@@ -79,7 +81,10 @@ export class SummaryService {
         ? filterParamsDecoder(normalizedFilter)
         : null;
 
-      const [result] = await this.summaryRepository.getTicketSummaryAgg(filterMatch, now);
+      const start = startDate ? new Date(startDate) : undefined;
+      const end   = endDate   ? new Date(endDate)   : undefined;
+
+      const [result] = await this.summaryRepository.getTicketSummaryAgg(filterMatch, now, start, end);
 
       const priorityMap = Object.fromEntries(
         (result.byPriority ?? []).map((p: any) => [p._id, p.count]),
@@ -92,47 +97,55 @@ export class SummaryService {
       );
       const timeTotals = result.timeTotals?.[0];
 
-      return {
-        success: true,
-        message: 'Ticket summary fetched successfully',
-        data: {
-          totalTicket: result.total?.[0]?.count ?? 0,
-          priority: {
-            totalLow:       priorityMap['Low']       ?? 0,
-            totalMedium:    priorityMap['Medium']    ?? 0,
-            totalHigh:      priorityMap['High']      ?? 0,
-            totalEmergency: priorityMap['Emergency'] ?? 0,
-          },
-          statuses: {
-            totalOpen:            statusMap['Open']              ?? 0,
-            totalInProgress:      statusMap['In Progress']       ?? 0,
-            totalDeveloped:       statusMap['Developed']         ?? 0,
-            totalQAInProgress:    statusMap['QA In Progress']    ?? 0,
-            totalReadyForRelease: statusMap['Ready for Release'] ?? 0,
-            totalReleased:        statusMap['Released']          ?? 0,
-            totalClosed:          statusMap['Closed']            ?? 0,
-            totalOverdue:         result.overdue?.[0]?.count     ?? 0,
-          },
-          ticketType: {
-            feature:     typeMap['feature']     ?? 0,
-            bug:         typeMap['bug']         ?? 0,
-            improvement: typeMap['improvement'] ?? 0,
-          },
-          totalEstimatedTime: minsToHHMM(timeTotals?.totalEstimatedMins ?? 0),
-          totalWorkTime:      msToHHMM(timeTotals?.totalWorktimeMs      ?? 0),
+      const data: Record<string, any> = {
+        totalTicket: result.total?.[0]?.count ?? 0,
+        priority: {
+          totalLow:       priorityMap['Low']       ?? 0,
+          totalMedium:    priorityMap['Medium']    ?? 0,
+          totalHigh:      priorityMap['High']      ?? 0,
+          totalEmergency: priorityMap['Emergency'] ?? 0,
         },
+        statuses: {
+          totalOpen:            statusMap['Open']              ?? 0,
+          totalInProgress:      statusMap['In Progress']       ?? 0,
+          totalDeveloped:       statusMap['Developed']         ?? 0,
+          totalQAInProgress:    statusMap['QA In Progress']    ?? 0,
+          totalReadyForRelease: statusMap['Ready for Release'] ?? 0,
+          totalReleased:        statusMap['Released']          ?? 0,
+          totalClosed:          statusMap['Closed']            ?? 0,
+          totalOverdue:         result.overdue?.[0]?.count     ?? 0,
+        },
+        ticketType: {
+          feature:     typeMap['feature']     ?? 0,
+          bug:         typeMap['bug']         ?? 0,
+          improvement: typeMap['improvement'] ?? 0,
+        },
+        totalEstimatedTime: minsToHHMM(timeTotals?.totalEstimatedMins ?? 0),
+        totalWorkTime:      msToHHMM(timeTotals?.totalWorktimeMs      ?? 0),
       };
+
+      if (start && end) {
+        const days = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const extraTotals = result.extraTimeTotals?.[0];
+        data.totalHours             = days * 8;
+        data.totalExtraEstimatedTime = minsToHHMM(extraTotals?.totalExtraEstimatedMins ?? 0);
+        data.totalExtraWorkTime      = msToHHMM(extraTotals?.totalExtraWorktimeMs      ?? 0);
+      }
+
+      return { success: true, message: 'Ticket summary fetched successfully', data };
     } catch (err) {
       this.logger.error('SummaryService.getTicketSummary failed', err instanceof Error ? err.stack : err);
       throw err;
     }
   }
 
-  async getTaskSummary(filter?: string) {
+  async getTaskSummary(filter?: string, startDate?: string, endDate?: string) {
     try {
       const now = new Date();
       const filterMatch = filter && filter !== '{}' ? filterParamsDecoder(filter) : null;
-      const [result] = await this.summaryRepository.getTaskSummaryAgg(filterMatch, now);
+      const start = startDate ? new Date(startDate) : undefined;
+      const end   = endDate   ? new Date(endDate)   : undefined;
+      const [result] = await this.summaryRepository.getTaskSummaryAgg(filterMatch, now, start, end);
 
       const priorityMap = Object.fromEntries(
         (result.byPriority ?? []).map((p: any) => [p._id, p.count]),

@@ -10,20 +10,32 @@ export class SummaryController {
 
   @SkipRbac()
   @Get('userSummary')
-  getUserSummary(@Query('filter') filter?: string) {
-    return this.summaryService.getUserSummary(filter);
+  getUserSummary(
+    @Query('filter') filter?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.summaryService.getUserSummary(filter, startDate, endDate);
   }
 
   @SkipRbac()
   @Get('ticketSummary')
-  getTicketSummary(@Query('filter') filter?: string) {
-    return this.summaryService.getTicketSummary(filter);
+  getTicketSummary(
+    @Query('filter') filter?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.summaryService.getTicketSummary(filter, startDate, endDate);
   }
 
   @SkipRbac()
   @Get('taskSummary')
-  getTaskSummary(@Query('filter') filter?: string) {
-    return this.summaryService.getTaskSummary(filter);
+  getTaskSummary(
+    @Query('filter') filter?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.summaryService.getTaskSummary(filter, startDate, endDate);
   }
 
   @SkipRbac()
