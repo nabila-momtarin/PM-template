@@ -211,54 +211,94 @@ export class SummaryRepository {
       },
     ];
 
-    const facet: Record<string, any> = {
-      byPriority: [{ $group: { _id: '$priority',   count: { $sum: 1 } } }],
-      byStatus:   [{ $group: { _id: '$status',     count: { $sum: 1 } } }],
-      byType:     [{ $group: { _id: '$ticketType', count: { $sum: 1 } } }],
-      total:      [{ $count: 'count' }],
-      overdue: [
-        { $match: { dueDate: { $lt: now }, status: { $ne: 'Closed' } } },
-        { $count: 'count' },
-      ],
-      timeTotals: [
-        { $lookup: { from: 'tasks', let: { ticketId: '$_id' }, pipeline: taskLookupPipeline, as: 'taskData' } },
-        { $unwind: { path: '$taskData', preserveNullAndEmptyArrays: true } },
-        {
-          $group: {
-            _id: null,
-            totalEstimatedMins: { $sum: { $ifNull: ['$taskData.estimatedTime', 0] } },
-            totalWorktimeMs:    { $sum: { $ifNull: ['$taskData.worktimeMs', 0] } },
-          },
-        },
-      ],
-    };
-
-    if (start && end) {
-      facet.extraTimeTotals = [
-        { $match: { $or: [{ dueDate: { $lt: start } }, { dueDate: { $gt: end } }] } },
-        { $lookup: { from: 'tasks', let: { ticketId: '$_id' }, pipeline: taskLookupPipeline, as: 'taskData' } },
-        { $unwind: { path: '$taskData', preserveNullAndEmptyArrays: true } },
-        {
-          $group: {
-            _id: null,
-            totalExtraEstimatedMins: { $sum: { $ifNull: ['$taskData.estimatedTime', 0] } },
-            totalExtraWorktimeMs:    { $sum: { $ifNull: ['$taskData.worktimeMs', 0] } },
-          },
-        },
-      ];
-    }
-
     return this.ticketModel.aggregate([
       {
         $match: {
           $and: [
             { isDeleted: false },
+            ...(start && end ? [{ dueDate: { $gte: start, $lte: end } }] : []),
             ...(filterMatch ? [filterMatch] : []),
           ],
         },
       },
-      { $facet: facet },
+      {
+        $facet: {
+          byPriority: [{ $group: { _id: '$priority',   count: { $sum: 1 } } }],
+          byStatus:   [{ $group: { _id: '$status',     count: { $sum: 1 } } }],
+          byType:     [{ $group: { _id: '$ticketType', count: { $sum: 1 } } }],
+          total:      [{ $count: 'count' }],
+          overdue: [
+            { $match: { dueDate: { $lt: now }, status: { $ne: 'Closed' } } },
+            { $count: 'count' },
+          ],
+          timeTotals: [
+            { $lookup: { from: 'tasks', let: { ticketId: '$_id' }, pipeline: taskLookupPipeline, as: 'taskData' } },
+            { $unwind: { path: '$taskData', preserveNullAndEmptyArrays: true } },
+            {
+              $group: {
+                _id: null,
+                totalEstimatedMins: { $sum: { $ifNull: ['$taskData.estimatedTime', 0] } },
+                totalWorktimeMs:    { $sum: { $ifNull: ['$taskData.worktimeMs', 0] } },
+              },
+            },
+          ],
+        },
+      },
     ]);
+  }
+
+  async getExtraTimeTotalsAgg(
+    filterMatch: Record<string, any> | null,
+    start: Date,
+    end: Date,
+  ): Promise<any> {
+    const taskLookupPipeline = [
+      {
+        $match: {
+          $expr: { $and: [
+            { $eq: ['$ticketId', '$$ticketId'] },
+            { $eq: ['$isDeleted', false] },
+          ]},
+        },
+      },
+      { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+      {
+        $group: {
+          _id: '$_id',
+          estimatedTime: { $first: '$estimatedTime' },
+          worktimeMs: {
+            $sum: {
+              $subtract: [
+                { $ifNull: ['$worktime.endTime', '$$NOW'] },
+                '$worktime.startTime',
+              ],
+            },
+          },
+        },
+      },
+    ];
+
+    const [result] = await this.ticketModel.aggregate([
+      {
+        $match: {
+          $and: [
+            { isDeleted: false },
+            { $or: [{ dueDate: { $lt: start } }, { dueDate: { $gt: end } }] },
+            ...(filterMatch ? [filterMatch] : []),
+          ],
+        },
+      },
+      { $lookup: { from: 'tasks', let: { ticketId: '$_id' }, pipeline: taskLookupPipeline, as: 'taskData' } },
+      { $unwind: { path: '$taskData', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: null,
+          totalExtraEstimatedMins: { $sum: { $ifNull: ['$taskData.estimatedTime', 0] } },
+          totalExtraWorktimeMs:    { $sum: { $ifNull: ['$taskData.worktimeMs', 0] } },
+        },
+      },
+    ]);
+    return result ?? { totalExtraEstimatedMins: 0, totalExtraWorktimeMs: 0 };
   }
 
   async getTaskSummaryAgg(
@@ -326,6 +366,14 @@ export class SummaryRepository {
       { $count: 'count' },
     ]);
     return result?.count ?? 0;
+  }
+
+  async getUserById(userId: string): Promise<any | null> {
+    return this.userModel
+      .findById(userId)
+      .select({ _id: 1, name: 1, photo: 1, email: 1 })
+      .lean()
+      .exec();
   }
 
   async getUserWorktimeInRangeAgg(start: Date, end: Date, sort?: string): Promise<any[]> {

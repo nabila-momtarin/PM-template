@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { minsToHHMM, minsToHHMMSS, msToHHMM, msToHHMMSS } from 'src/common/utils/time.utils';
-import { filterParamsDecoder } from 'src/common/utils/params-decoder';
+import { filterParamsDecoder, extractFromFilter } from 'src/common/utils/params-decoder';
 import { SummaryRepository } from '../repositroy/summary.repository';
 
 const USER_LEVEL_FIELDS = new Set(['assignee', 'name']);
@@ -84,7 +84,12 @@ export class SummaryService {
       const start = startDate ? new Date(startDate) : undefined;
       const end   = endDate   ? new Date(endDate)   : undefined;
 
-      const [result] = await this.summaryRepository.getTicketSummaryAgg(filterMatch, now, start, end);
+      const queries: [Promise<any[]>, Promise<any> | null] = [
+        this.summaryRepository.getTicketSummaryAgg(filterMatch, now, start, end),
+        start && end ? this.summaryRepository.getExtraTimeTotalsAgg(filterMatch, start, end) : null,
+      ];
+      const [ticketResults, extraTotals] = await Promise.all(queries);
+      const [result] = ticketResults;
 
       const priorityMap = Object.fromEntries(
         (result.byPriority ?? []).map((p: any) => [p._id, p.count]),
@@ -126,8 +131,7 @@ export class SummaryService {
 
       if (start && end) {
         const days = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        const extraTotals = result.extraTimeTotals?.[0];
-        data.totalHours             = days * 8;
+        data.totalHours              = days * 8;
         data.totalExtraEstimatedTime = minsToHHMM(extraTotals?.totalExtraEstimatedMins ?? 0);
         data.totalExtraWorkTime      = msToHHMM(extraTotals?.totalExtraWorktimeMs      ?? 0);
       }
@@ -189,6 +193,14 @@ export class SummaryService {
         data.overloadedUsers  = { totalUser: overloadedList.length, userList: overloadedList.map(strip) };
         data.availableUsers   = { totalUser: availableList.length,  userList: availableList.map(strip)  };
         data.anomalyTotalTask = anomalyCount;
+      }
+
+      const assigneeIdStr = extractFromFilter(filter, 'assignee');
+      if (assigneeIdStr) {
+        const user = await this.summaryRepository.getUserById(assigneeIdStr);
+        if (user) {
+          data.user = { id: user._id, name: user.name, photo: user.photo, email: user.email };
+        }
       }
 
       return { success: true, message: 'Task summary fetched successfully', data };
