@@ -77,18 +77,41 @@ export class SummaryService {
     try {
       const now = new Date();
       const normalizedFilter = filter?.replace(/projectIds/g, 'projects');
-      const filterMatch = normalizedFilter && normalizedFilter !== '{}'
-        ? filterParamsDecoder(normalizedFilter)
+
+      // Extract assignee separately — tickets have no direct assignee field; filter via task lookup
+      const assigneeIdStr = normalizedFilter
+        ? (extractFromFilter(normalizedFilter, 'assignee') ?? undefined)
+        : undefined;
+
+      // Remove assignee from ticket-level filter
+      let ticketFilter = normalizedFilter;
+      if (assigneeIdStr && normalizedFilter) {
+        try {
+          const parsed = JSON.parse(normalizedFilter.replace(/'/g, '"'));
+          if (parsed.and && !Array.isArray(parsed.and)) {
+            const cleaned = Object.fromEntries(
+              Object.entries(parsed.and as Record<string, any>).filter(
+                ([k]) => k !== 'assignee' && !k.startsWith('assignee__'),
+              ),
+            );
+            ticketFilter = JSON.stringify({ ...parsed, and: cleaned });
+          }
+        } catch { /* keep original */ }
+      }
+
+      const filterMatch = ticketFilter && ticketFilter !== '{}'
+        ? filterParamsDecoder(ticketFilter)
         : null;
 
       const start = startDate ? new Date(startDate) : undefined;
       const end   = endDate   ? new Date(endDate)   : undefined;
 
-      const queries: [Promise<any[]>, Promise<any> | null] = [
-        this.summaryRepository.getTicketSummaryAgg(filterMatch, now, start, end),
-        start && end ? this.summaryRepository.getExtraTimeTotalsAgg(filterMatch, start, end) : null,
-      ];
-      const [ticketResults, extraTotals] = await Promise.all(queries);
+      const [ticketResults, extraTotals] = await Promise.all([
+        this.summaryRepository.getTicketSummaryAgg(filterMatch, now, start, end, assigneeIdStr),
+        start && end
+          ? this.summaryRepository.getExtraTimeTotalsAgg(filterMatch, start, end, assigneeIdStr)
+          : Promise.resolve(null),
+      ]);
       const [result] = ticketResults;
 
       const priorityMap = Object.fromEntries(
