@@ -34,8 +34,9 @@ export class SummaryController {
     @Query('filter') filter?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.summaryService.getTaskSummary(filter, startDate, endDate);
+    return this.summaryService.getTaskSummary(filter, startDate, endDate, sort);
   }
 
   @SkipRbac()

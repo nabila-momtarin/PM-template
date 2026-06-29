@@ -300,6 +300,82 @@ export class SummaryRepository {
     ]);
   }
 
+  async getAnomalyTaskCount(start: Date, end: Date): Promise<number> {
+    const [result] = await this.taskModel.aggregate([
+      { $match: { isDeleted: false } },
+      {
+        $lookup: {
+          from: 'tickets',
+          localField: 'ticketId',
+          foreignField: '_id',
+          as: 'ticket',
+          pipeline: [{ $project: { _id: 0, dueDate: 1 } }],
+        },
+      },
+      { $unwind: { path: '$ticket', preserveNullAndEmptyArrays: false } },
+      {
+        $match: {
+          $or: [
+            // Case 1: ticket dueDate after range, but task is completed
+            { 'ticket.dueDate': { $gt: end },  status: 'Completed' },
+            // Case 2: ticket dueDate within range, but task is not completed
+            { 'ticket.dueDate': { $gte: start, $lte: end }, status: { $ne: 'Completed' } },
+          ],
+        },
+      },
+      { $count: 'count' },
+    ]);
+    return result?.count ?? 0;
+  }
+
+  async getUserWorktimeInRangeAgg(start: Date, end: Date, sort?: string): Promise<any[]> {
+    return this.taskModel.aggregate([
+      { $match: { isDeleted: false } },
+      { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+      { $match: { 'worktime.startTime': { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: { userId: '$assignee', taskId: '$_id' },
+          worktimeMs: {
+            $sum: {
+              $subtract: [
+                { $ifNull: ['$worktime.endTime', '$$NOW'] },
+                '$worktime.startTime',
+              ],
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$_id.userId',
+          totalWorktimeMs: { $sum: '$worktimeMs' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user',
+          pipeline: [{ $project: { _id: 1, name: 1, email: 1, photo: 1, createdAt: 1 } }],
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: false } },
+      {
+        $project: {
+          _id: '$user._id',
+          name: '$user.name',
+          email: '$user.email',
+          photo: '$user.photo',
+          createdAt: '$user.createdAt',
+          totalWorktimeMs: 1,
+        },
+      },
+      { $sort: { [sort || 'createdAt']: -1 } },
+    ]);
+  }
+
   async getUserTicketSummaryAgg(userId: string): Promise<any[]> {
     return this.taskModel.aggregate([
       {

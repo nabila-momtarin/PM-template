@@ -98,9 +98,6 @@ export class TaskService {
         }
       }
 
-      // ── Case : task due date >= ticket due date ──
-      let taskDueDate: Date;
-
       if (dto.dueDate) {
         const parsedDueDate = new Date(dto.dueDate);
 
@@ -115,11 +112,6 @@ export class TaskService {
             'Task due date cannot be later than the due date of the associated ticket',
           );
         }
-
-        taskDueDate = parsedDueDate;
-      } else {
-        // Not provided → default to the ticket's due date
-        taskDueDate = ticket.dueDate;
       }
 
       const taskNumber = await this.generateTaskNumber();
@@ -646,4 +638,37 @@ export class TaskService {
 
   //     return filter;
   //   }
+
+  async getAnomalyTasks(startDate: string, endDate: string, page: number, limit: number) {
+    try {
+      const start = new Date(startDate);
+      const end   = new Date(endDate);
+      const skip  = (page - 1) * limit;
+
+      const [result] = await this.taskRepository.getAnomalyTasksAgg(start, end, skip, limit);
+
+      const totalItems = result.total?.[0]?.count ?? 0;
+      const items = (result.items ?? []).map((item: any, index: number) => ({
+        sl: skip + index + 1,
+        ...item,
+      }));
+
+      return {
+        success: true,
+        message: 'Anomaly tasks fetched successfully',
+        data: {
+          items,
+          pagination: {
+            totalItems,
+            totalPages: Math.ceil(totalItems / limit) || 1,
+            currentPage: page,
+            pageSize: limit,
+          },
+        },
+      };
+    } catch (err) {
+      this.logger.error('TaskService.getAnomalyTasks failed', err instanceof Error ? err.stack : err);
+      throw err;
+    }
+  }
 }

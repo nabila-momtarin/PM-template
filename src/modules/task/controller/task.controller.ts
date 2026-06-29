@@ -58,6 +58,21 @@ export class TaskController {
     return this.taskService.getTasksByStatus('Completed', query);
   }
 
+  @Get('anomaly')
+  async getAnomalyTasks(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.taskService.getAnomalyTasks(
+      startDate,
+      endDate,
+      Math.max(1, parseInt(page, 10) || 1),
+      Math.max(1, parseInt(limit, 10) || 10),
+    );
+  }
+
   @Get(':id')
   async getTask(@Param('id') id: string) {
     this.logger.debug('..');

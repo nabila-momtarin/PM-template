@@ -139,7 +139,7 @@ export class SummaryService {
     }
   }
 
-  async getTaskSummary(filter?: string, startDate?: string, endDate?: string) {
+  async getTaskSummary(filter?: string, startDate?: string, endDate?: string, sort?: string) {
     try {
       const now = new Date();
       const filterMatch = filter && filter !== '{}' ? filterParamsDecoder(filter) : null;
@@ -154,24 +154,44 @@ export class SummaryService {
         (result.byStatus ?? []).map((s: any) => [s._id, s.count]),
       );
 
-      return {
-        success: true,
-        message: 'Task summary fetched successfully',
-        data: {
-          priority: {
-            low:       priorityMap['Low']       ?? 0,
-            mid:       priorityMap['Medium']    ?? 0,
-            high:      priorityMap['High']      ?? 0,
-            emergency: priorityMap['Emergency'] ?? 0,
-          },
-          statuses: {
-            toDo:       statusMap['Todo']          ?? 0,
-            overdue:    result.overdue?.[0]?.count ?? 0,
-            inProgress: statusMap['In Progress']   ?? 0,
-            completed:  statusMap['Completed']     ?? 0,
-          },
+      const data: Record<string, any> = {
+        priority: {
+          low:       priorityMap['Low']       ?? 0,
+          mid:       priorityMap['Medium']    ?? 0,
+          high:      priorityMap['High']      ?? 0,
+          emergency: priorityMap['Emergency'] ?? 0,
         },
+        statuses: {
+          toDo:       statusMap['Todo']          ?? 0,
+          overdue:    result.overdue?.[0]?.count ?? 0,
+          inProgress: statusMap['In Progress']   ?? 0,
+          completed:  statusMap['Completed']     ?? 0,
+        },
+        overloadedUsers: { totalUser: 0, userList: [] },
+        availableUsers:  { totalUser: 0, userList: [] },
+        anomalyTotalTask: 0,
       };
+
+      if (start && end) {
+        const days         = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const capacityMs   = days * 8 * 3_600_000;
+
+        const [userWorktimes, anomalyCount] = await Promise.all([
+          this.summaryRepository.getUserWorktimeInRangeAgg(start, end, sort),
+          this.summaryRepository.getAnomalyTaskCount(start, end),
+        ]);
+
+        const overloadedList = userWorktimes.filter((u) => u.totalWorktimeMs > capacityMs * 0.7);
+        const availableList  = userWorktimes.filter((u) => u.totalWorktimeMs < capacityMs * 0.5);
+
+        const strip = ({ totalWorktimeMs: _, createdAt: __, ...u }: any) => u;
+
+        data.overloadedUsers  = { totalUser: overloadedList.length, userList: overloadedList.map(strip) };
+        data.availableUsers   = { totalUser: availableList.length,  userList: availableList.map(strip)  };
+        data.anomalyTotalTask = anomalyCount;
+      }
+
+      return { success: true, message: 'Task summary fetched successfully', data };
     } catch (err) {
       this.logger.error('SummaryService.getTaskSummary failed', err instanceof Error ? err.stack : err);
       throw err;
