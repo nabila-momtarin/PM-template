@@ -118,6 +118,12 @@ export const PERMISSIONS: PermissionCatalog = [
     label: 'Change ticket QA status',
     category: 'Tickets',
   },
+   {
+    method: 'PATCH',
+    path: '/api/v1/tickets/:id/change-status/open',
+    label: 'Move ticket to Open',
+    category: 'Tickets',
+  },
   {
     method: 'PATCH',
     path: '/api/v1/tickets/:id/change-status/in-progress',
