@@ -899,7 +899,7 @@ export class SummaryRepository {
                     },
                   },
                 },
-                { $project: { totalCount: 1, list: { $slice: ['$list', 50] } } }, // payload bloat ঠেকাতে limit
+                { $project: { totalCount: 1, list: 1/* { $slice: ['$list', 50] } */ } }, // payload bloat ঠেকাতে limit
               ]
             : [],
 
@@ -927,7 +927,7 @@ export class SummaryRepository {
                     },
                   },
                 },
-                { $project: { totalCount: 1, list: { $slice: ['$list', 50] } } },
+                { $project: { totalCount: 1, list: 1 /* { $slice: ['$list', 50] } */ } }, // payload bloat ঠেকাতে limit
               ]
             : [],
         },

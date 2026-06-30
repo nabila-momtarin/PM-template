@@ -7,8 +7,8 @@ export function getWorkingDaysCount(start: Date, end: Date): number {
   const cur = new Date(start);
 
   while (cur <= end) {
-    const day = cur.getDay(); // 0 = Sunday, 6 = Saturday
-    if (day !== 0 && day !== 6) count++;
+    const day = cur.getDay(); // 5 = Friday, 6 = Saturday
+    if (day !== 5 && day !== 6) count++;
     cur.setDate(cur.getDate() + 1);
   }
 
