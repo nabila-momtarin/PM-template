@@ -638,7 +638,30 @@ export class SummaryService {
               workTime: hasFullRange ? msToHHMM(workload?.totalWorktimeMs ?? 0) : null,
             },
             // NOTE: repository-তে nested $facet সরিয়ে $group দেওয়ায় shape সহজ হয়েছে —
-            // আগে ছিল totalCount?.[0]?.count, এখন সরাসরি totalCount
+
+            tickets: {
+              totalTickets: ticketFacet.total?.[0]?.count ?? 0,
+              priority: {
+                low: ticketPriorityMap[TicketPriority.LOW] ?? 0,
+                mid: ticketPriorityMap[TicketPriority.MEDIUM] ?? 0,
+                high: ticketPriorityMap[TicketPriority.HIGH] ?? 0,
+                emergency: ticketPriorityMap[TicketPriority.EMERGENCY] ?? 0,
+              },
+              statuses: {
+                open: ticketStatusMap[TicketStatus.OPEN] ?? 0,
+                inProgress: ticketStatusMap[TicketStatus.IN_PROGRESS] ?? 0,
+                developed: ticketStatusMap[TicketStatus.DEVELOPED] ?? 0,
+                qaInProgress: ticketStatusMap[TicketStatus.QA_IN_PROGRESS] ?? 0,
+                readyToRelease: ticketStatusMap[TicketStatus.READY_FOR_RELEASE] ?? 0,
+                released: ticketStatusMap[TicketStatus.RELEASED] ?? 0,
+                closed: ticketStatusMap[TicketStatus.CLOSED] ?? 0,
+              },
+              type: {
+                bug: ticketTypeMap[TicketType.BUG.toLowerCase()] ?? 0,
+                feature: ticketTypeMap[TicketType.FEATURE.toLowerCase()] ?? 0,
+                improvement: ticketTypeMap[TicketType.IMPROVEMENT.toLowerCase()] ?? 0,
+              },
+            },
             anomalyTask: {
               totalCount: hasFullRange ? (anomalyBranch?.totalCount ?? 0) : null,
               list: anomalyBranch?.list ?? [],
@@ -648,29 +671,7 @@ export class SummaryService {
               list: ignoredBranch?.list ?? [],
             },
           },
-          tickets: {
-            totalTickets: ticketFacet.total?.[0]?.count ?? 0,
-            priority: {
-              low: ticketPriorityMap[TicketPriority.LOW] ?? 0,
-              mid: ticketPriorityMap[TicketPriority.MEDIUM] ?? 0,
-              high: ticketPriorityMap[TicketPriority.HIGH] ?? 0,
-              emergency: ticketPriorityMap[TicketPriority.EMERGENCY] ?? 0,
-            },
-            statuses: {
-              open: ticketStatusMap[TicketStatus.OPEN] ?? 0,
-              inProgress: ticketStatusMap[TicketStatus.IN_PROGRESS] ?? 0,
-              developed: ticketStatusMap[TicketStatus.DEVELOPED] ?? 0,
-              qaInProgress: ticketStatusMap[TicketStatus.QA_IN_PROGRESS] ?? 0,
-              readyToRelease: ticketStatusMap[TicketStatus.READY_FOR_RELEASE] ?? 0,
-              released: ticketStatusMap[TicketStatus.RELEASED] ?? 0,
-              closed: ticketStatusMap[TicketStatus.CLOSED] ?? 0,
-            },
-            type: {
-              bug: ticketTypeMap[TicketType.BUG.toLowerCase()] ?? 0,
-              feature: ticketTypeMap[TicketType.FEATURE.toLowerCase()] ?? 0,
-              improvement: ticketTypeMap[TicketType.IMPROVEMENT.toLowerCase()] ?? 0,
-            },
-          },
+
           taskHistory: (taskFacet.taskHistory ?? []).map((h: any) => ({
             date: h._id,
             totalEstimatedTime: minsToHHMM(h.totalEstimatedMins ?? 0),
