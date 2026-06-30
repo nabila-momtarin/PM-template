@@ -57,10 +57,7 @@ export class SummaryController {
 
   @SkipRbac()
   @Get('worktime-overview')
-  getWorktimeOverview(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
+  getWorktimeOverview(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
     return this.summaryService.getWorktimeOverview(startDate, endDate);
   }
 
@@ -96,5 +93,11 @@ export class SummaryController {
   @Get('me/active-task')
   getCurrentUserActiveTask(@CurrentUser() user: AuthenticatedUser) {
     return this.summaryService.getCurrentUserActiveTask(user.userId);
+  }
+
+  // Admin Summary for Dashboard
+  @Get('summaries')
+  getDashboardSummaries(@Query('filter') filter?: string) {
+    return this.summaryService.getDashboardSummaries(filter);
   }
 }

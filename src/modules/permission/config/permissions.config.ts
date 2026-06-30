@@ -356,6 +356,12 @@ export const PERMISSIONS: PermissionCatalog = [
     label: 'View my worktime overview',
     category: 'Dashboard',
   },
+  {
+  method: 'GET',
+  path: '/api/v1/dashboard/summaries',
+  label: 'View dashboard summaries',
+  category: 'Dashboard',
+},
 
   // ── Roles: 5 ───────────────────────────────────────────────
   {
