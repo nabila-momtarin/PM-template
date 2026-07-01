@@ -8,15 +8,12 @@ import { AuthenticatedUser } from 'src/infrastructure/auth/types/auth.types';
 export class SummaryController {
   constructor(private readonly summaryService: SummaryService) {}
 
+
   @SkipRbac()
-  @Get('userSummary')
-  getUserSummary(
-    @Query('filter') filter?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.summaryService.getUserSummary(filter, startDate, endDate);
-  }
+@Get('userSummary')
+getUserSummary(@Query('filter') filter?: string) {
+  return this.summaryService.getUserSummary(filter);
+}
 
   @SkipRbac()
   @Get('ticketSummary')
