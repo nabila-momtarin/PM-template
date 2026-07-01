@@ -15,170 +15,184 @@ export class SummaryRepository {
   private readonly logger = new Logger(SummaryRepository.name);
 
   async getUserSummaryAgg(
-    userFilterMatch: Record<string, any> | null,
-    taskFilterMatch: Record<string, any> | null,
-    now: Date,
-    start?: Date,
-    end?: Date,
-  ): Promise<any[]> {
-    const worktimeDateFilter =
-      start && end
-        ? [
-            { $gte: ['$tasks.worktime.startTime', start] },
-            { $lte: ['$tasks.worktime.startTime', end] },
-          ]
-        : [];
+  userFilterMatch: Record<string, any> | null,
+  taskFilterMatch: Record<string, any> | null,
+  now: Date,
+  start?: Date,
+  end?: Date,
+): Promise<any[]> {
+  // ── dueDate range টা task-level $match এ বসাচ্ছি, worktime-এর ভিতরে না ──
+  const dueDateRangeMatch =
+    start && end ? { dueDate: { $gte: start, $lte: end } } : null;
 
-    return this.userModel.aggregate([
-      {
-        $match: {
-          $and: [{ isDeleted: false }, ...(userFilterMatch ? [userFilterMatch] : [])],
+  return this.userModel.aggregate([
+    {
+      $match: {
+        $and: [{ isDeleted: false }, ...(userFilterMatch ? [userFilterMatch] : [])],
+      },
+    },
+    {
+      $lookup: {
+        from: 'tasks',
+        let: { userId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $and: [
+                {
+                  $expr: {
+                    $and: [{ $eq: ['$assignee', '$$userId'] }, { $eq: ['$isDeleted', false] }],
+                  },
+                },
+                ...(dueDateRangeMatch ? [dueDateRangeMatch] : []),   // ✅ added
+                ...(taskFilterMatch ? [taskFilterMatch] : []),
+              ],
+            },
+          },
+        ],
+        as: 'tasks',
+      },
+    },
+    // ✅ Bug 1 fix — সব user সবসময় থাকবে (0 task হলেও), filter matter করে না
+    { $unwind: { path: '$tasks', preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: '$tasks.worktime', preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: { userId: '$_id', taskId: '$tasks._id' },
+        userName: { $first: '$name' },
+        userPhoto: { $first: '$photo' },
+        estimatedTime: { $first: '$tasks.estimatedTime' },
+        taskStatus: { $first: '$tasks.status' },
+        taskTitle: { $first: '$tasks.title' },
+        taskDueDate: { $first: '$tasks.dueDate' },
+        taskTicketId: { $first: '$tasks.ticketId' },
+        // ✅ Bug 3 fix — worktime session কখন হয়েছে matter করে না, matched task হলেই পুরোটা count
+        worktimeMs: {
+          $sum: {
+            $cond: {
+              if: { $ifNull: ['$tasks.worktime.startTime', false] },
+              then: {
+                $subtract: [
+                  { $ifNull: ['$tasks.worktime.endTime', '$$NOW'] },
+                  '$tasks.worktime.startTime',
+                ],
+              },
+              else: 0,
+            },
+          },
         },
       },
-      {
-        $lookup: {
-          from: 'tasks',
-          let: { userId: '$_id' },
-          pipeline: [
-            {
-              $match: {
+    },
+    {
+      $group: {
+        _id: '$_id.userId',
+        name: { $first: '$userName' },
+        photo: { $first: '$userPhoto' },
+        totalEstimatedMins: { $sum: { $ifNull: ['$estimatedTime', 0] } },
+        totalWorktimeMs: { $sum: '$worktimeMs' },
+        totalTaskCount: { $sum: { $cond: [{ $ifNull: ['$_id.taskId', false] }, 1, 0] } },
+        completedTaskCount: { $sum: { $cond: [{ $eq: ['$taskStatus', 'Completed'] }, 1, 0] } },
+        overDueTaskCount: {
+          $sum: {
+            $cond: [
+              {
                 $and: [
-                  {
-                    $expr: {
-                      $and: [{ $eq: ['$assignee', '$$userId'] }, { $eq: ['$isDeleted', false] }],
-                    },
-                  },
-                  ...(taskFilterMatch ? [taskFilterMatch] : []),
+                  { $ifNull: ['$taskDueDate', false] },
+                  { $lt: ['$taskDueDate', now] },
+                  { $ne: ['$taskStatus', 'Completed'] },
+                ],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+      },
+    },
+    // ✅ Bug 2 fix — runningTask আলাদা lookup দিয়ে বের করা, project/date filter থেকে independent
+    {
+      $lookup: {
+        from: 'tasks',
+        let: { userId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$assignee', '$$userId'] },
+                  { $eq: ['$isDeleted', false] },
+                  { $eq: ['$status', 'In Progress'] },
                 ],
               },
             },
-          ],
-          as: 'tasks',
-        },
+          },
+          { $sort: { updatedAt: -1 } },   // একাধিক in-progress থাকলে latest টা — confirm করো এই priority ঠিক আছে কিনা
+          { $limit: 1 },
+          { $project: { _id: 1, title: 1, ticketId: 1 } },
+        ],
+        as: 'runningTaskData',
       },
-      { $unwind: { path: '$tasks', preserveNullAndEmptyArrays: !taskFilterMatch } },
-      { $unwind: { path: '$tasks.worktime', preserveNullAndEmptyArrays: true } },
-      {
-        $group: {
-          _id: { userId: '$_id', taskId: '$tasks._id' },
-          userName: { $first: '$name' },
-          userPhoto: { $first: '$photo' },
-          estimatedTime: { $first: '$tasks.estimatedTime' },
-          taskStatus: { $first: '$tasks.status' },
-          taskTitle: { $first: '$tasks.title' },
-          taskDueDate: { $first: '$tasks.dueDate' },
-          taskTicketId: { $first: '$tasks.ticketId' },
-          worktimeMs: {
-            $sum: {
+    },
+    {
+      $lookup: {
+        from: 'tickets',
+        let: { ticketId: { $arrayElemAt: ['$runningTaskData.ticketId', 0] } },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $and: [{ $eq: ['$_id', '$$ticketId'] }, { $eq: ['$isDeleted', false] }] },
+            },
+          },
+          { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1 } },
+        ],
+        as: 'ticketData',
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        userId: '$_id',
+        name: 1,
+        photo: 1,
+        totalTaskCount: 1,
+        completedTaskCount: 1,
+        overDueTaskCount: 1,
+        runningTask: {
+          $let: {
+            vars: { t: { $arrayElemAt: ['$runningTaskData', 0] } },
+            in: {
               $cond: {
-                if: {
-                  $and: [{ $ifNull: ['$tasks.worktime.startTime', false] }, ...worktimeDateFilter],
-                },
+                if: { $ifNull: ['$$t', false] },
+                then: { id: '$$t._id', name: '$$t.title' },
+                else: null,
+              },
+            },
+          },
+        },
+        estimatedTime: '$totalEstimatedMins',
+        workTime: '$totalWorktimeMs',
+        ticket: {
+          $let: {
+            vars: { t: { $arrayElemAt: ['$ticketData', 0] } },
+            in: {
+              $cond: {
+                if: { $ifNull: ['$$t', false] },
                 then: {
-                  $subtract: [
-                    { $ifNull: ['$tasks.worktime.endTime', '$$NOW'] },
-                    '$tasks.worktime.startTime',
-                  ],
+                  id: '$$t._id',
+                  ticketNumber: '$$t.ticketNumber',
+                  title: '$$t.title',
+                  priority: '$$t.priority',
+                  dueDate: '$$t.dueDate',
                 },
-                else: 0,
+                else: null,
               },
             },
           },
         },
       },
-      {
-        $group: {
-          _id: '$_id.userId',
-          name: { $first: '$userName' },
-          photo: { $first: '$userPhoto' },
-          totalEstimatedMins: { $sum: { $ifNull: ['$estimatedTime', 0] } },
-          totalWorktimeMs: { $sum: '$worktimeMs' },
-          totalTaskCount: { $sum: { $cond: [{ $ifNull: ['$_id.taskId', false] }, 1, 0] } },
-          completedTaskCount: {
-            $sum: { $cond: [{ $eq: ['$taskStatus', 'Completed'] }, 1, 0] },
-          },
-          overDueTaskCount: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $ifNull: ['$taskDueDate', false] },
-                    { $lt: ['$taskDueDate', now] },
-                    { $ne: ['$taskStatus', 'Completed'] },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-          runningTask: {
-            $max: {
-              $cond: [
-                { $eq: ['$taskStatus', 'In Progress'] },
-                { id: '$_id.taskId', name: '$taskTitle', ticketId: '$taskTicketId' },
-                null,
-              ],
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: 'tickets',
-          let: { ticketId: '$runningTask.ticketId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $and: [{ $eq: ['$_id', '$$ticketId'] }, { $eq: ['$isDeleted', false] }] },
-              },
-            },
-            { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1 } },
-          ],
-          as: 'ticketData',
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          userId: '$_id',
-          name: 1,
-          photo: 1,
-          totalTaskCount: 1,
-          completedTaskCount: 1,
-          overDueTaskCount: 1,
-          runningTask: {
-            $cond: {
-              if: { $ifNull: ['$runningTask.id', false] },
-              then: { id: '$runningTask.id', name: '$runningTask.name' },
-              else: null,
-            },
-          },
-          estimatedTime: '$totalEstimatedMins',
-          workTime: '$totalWorktimeMs',
-          ticket: {
-            $let: {
-              vars: { t: { $arrayElemAt: ['$ticketData', 0] } },
-              in: {
-                $cond: {
-                  if: { $ifNull: ['$$t', false] },
-                  then: {
-                    id: '$$t._id',
-                    ticketNumber: '$$t.ticketNumber',
-                    title: '$$t.title',
-                    priority: '$$t.priority',
-                    dueDate: '$$t.dueDate',
-                  },
-                  else: null,
-                },
-              },
-            },
-          },
-        },
-      },
-    ]);
-  }
-
+    },
+  ]);
+}
   async getTicketSummaryAgg(
     filterMatch: Record<string, any> | null,
     now: Date,
@@ -761,202 +775,6 @@ export class SummaryRepository {
       .lean()
       .exec();
   }
-
-  // ── Task collection-এর উপর single pass, $facet দিয়ে সব metric একসাথে বের করা ──
-
-  // async getDashboardTaskFacet(
-  //   match: Record<string, any>,
-  //   now: Date,
-  //   hasFullRange: boolean,
-  //   startDate?: Date,
-  //   endDate?: Date,
-  // ) {
-  //   return this.taskModel.aggregate([
-  //     // raw schema field-এ filter সবার আগে — lookup/transform-এর পরে দিলে silently broken হয় (আগের audit learning)
-  //     { $match: match },
-
-  //     // শুধু দরকারি field রাখা — facet branch-গুলোর per-doc memory load কমানোর জন্য
-  //     // ticketObjectId: কিছু পুরনো task-এ ticketId string হিসেবে stored (ObjectId না), তাই এখানেই একবার cast করে নেওয়া হচ্ছে —
-  //     // byPriority আর ticketIds দুই branch-ই এটা reuse করবে, duplicate $convert লাগবে না
-  //     {
-  //       $project: {
-  //         status: 1,
-  //         dueDate: 1,
-  //         estimatedTime: 1,
-  //         worktime: 1,
-  //         assignee: 1,
-  //         ticketId: 1,
-  //         taskNumber: 1,
-  //         title: 1,
-  //         ticketObjectId: {
-  //           $convert: { input: '$ticketId', to: 'objectId', onError: null, onNull: null },
-  //         },
-  //       },
-  //     },
-
-  //     {
-  //       $facet: {
-  //         // ── মোট task count ──
-  //         total: [{ $count: 'count' }],
-
-  //         // ── status-wise group (toDo/inProgress/completed) ──
-  //         byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
-
-  //         // ── dueDate পার হয়ে গেছে, এখনো Completed হয়নি ──
-  //         overdue: [
-  //           { $match: { dueDate: { $lt: now }, status: { $ne: 'Completed' } } },
-  //           { $count: 'count' },
-  //         ],
-
-  //         // ── ticket join করে priority আনা (priority Task-এ stored না, Ticket থেকে derive হয়) ──
-  //         byPriority: [
-  //           {
-  //             $lookup: {
-  //               from: 'tickets',
-  //               localField: 'ticketObjectId',
-  //               foreignField: '_id',
-  //               as: 'ticket',
-  //             },
-  //           },
-  //           { $unwind: { path: '$ticket', preserveNullAndEmptyArrays: true } },
-  //           { $group: { _id: '$ticket.priority', count: { $sum: 1 } } },
-  //         ],
-
-  //         // ── estimatedTime + worktime session sum (workload card-এর জন্য) ──
-  //         workload: [
-  //           {
-  //             $project: {
-  //               estimatedTime: 1,
-  //               worktimeMs: {
-  //                 $sum: {
-  //                   $map: {
-  //                     input: { $ifNull: ['$worktime', []] },
-  //                     as: 'w',
-  //                     // endTime null হলে এখনো চলছে — $$NOW দিয়ে live session-ও ধরা হচ্ছে
-  //                     in: { $subtract: [{ $ifNull: ['$$w.endTime', '$$NOW'] }, '$$w.startTime'] },
-  //                   },
-  //                 },
-  //               },
-  //             },
-  //           },
-  //           {
-  //             $group: {
-  //               _id: null,
-  //               totalEstimatedMins: { $sum: '$estimatedTime' },
-  //               totalWorktimeMs: { $sum: '$worktimeMs' },
-  //             },
-  //           },
-  //         ],
-
-  //         // ── worktime unwind করে date-wise group, প্রতিদিনের worktime/estimated sum ──
-  //         // রেঞ্জ দেওয়া না-দেওয়া নির্বিশেষে এটা সবসময় চলে (requirement অনুযায়ী)
-  //         taskHistory: [
-  //           { $unwind: '$worktime' },
-  //           {
-  //             $group: {
-  //               _id: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
-  //               totalWorkTimeMs: {
-  //                 $sum: {
-  //                   $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
-  //                 },
-  //               },
-  //               totalEstimatedMins: { $sum: '$estimatedTime' },
-  //             },
-  //           },
-  //           { $sort: { _id: 1 } },
-  //         ],
-
-  //         // ── assignee-wise estimatedTime sum (overloaded/available বের করতে দরকার) — শুধু range থাকলে চলে ──
-  //         userWorkload: hasFullRange
-  //           ? [{ $group: { _id: '$assignee', totalEstimatedMins: { $sum: '$estimatedTime' } } }]
-  //           : [],
-
-  //         // ── matched task-গুলোর parent ticketId সব বের করা — Ticket section কে এই দিয়েই scope করা হবে ──
-  //         // কারণ Ticket schema-তে dueDate নাই, তাই date-filter শুধু Task-এর মধ্য দিয়েই Ticket-এ পৌঁছাতে পারে
-  //         ticketIds: [{ $group: { _id: null, ids: { $addToSet: '$ticketObjectId' } } }],
-
-  //         // ── ANOMALY TASK: dueDate range-এর পরে, কিন্তু কাজ (worktime session) range-এর ভিতরে শুরু/চলেছে ──
-  //         // FIXED: nested $facet বাদ, $group+$push+$slice দিয়ে count+list একসাথে এক pass-এ
-  //         anomalyTask: hasFullRange
-  //           ? [
-  //               { $match: { dueDate: { $gt: endDate } } },
-  //               {
-  //                 $match: {
-  //                   worktime: { $elemMatch: { startTime: { $gte: startDate, $lte: endDate } } },
-  //                 },
-  //               },
-  //               {
-  //                 $group: {
-  //                   _id: null,
-  //                   totalCount: { $sum: 1 },
-  //                   list: {
-  //                     $push: {
-  //                       _id: '$_id',
-  //                       taskNumber: '$taskNumber',
-  //                       title: '$title',
-  //                       dueDate: '$dueDate',
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //               { $project: { totalCount: 1, list: 1/* { $slice: ['$list', 50] } */ } }, // payload bloat ঠেকাতে limit
-  //             ]
-  //           : [],
-
-  //         // ── IGNORED TASK: dueDate range-এর ভিতরে, কিন্তু কোনো worktime session-ই নাই (শুরুই হয়নি) ──
-  //         // FIXED: একই pattern, nested $facet ছাড়া
-  //         ignoredTask: hasFullRange
-  //           ? [
-  //               {
-  //                 $match: {
-  //                   dueDate: { $gte: startDate, $lte: endDate },
-  //                   $or: [{ worktime: { $exists: false } }, { worktime: { $size: 0 } }],
-  //                 },
-  //               },
-  //               {
-  //                 $group: {
-  //                   _id: null,
-  //                   totalCount: { $sum: 1 },
-  //                   list: {
-  //                     $push: {
-  //                       _id: '$_id',
-  //                       taskNumber: '$taskNumber',
-  //                       title: '$title',
-  //                       dueDate: '$dueDate',
-  //                     },
-  //                   },
-  //                 },
-  //               },
-  //               { $project: { totalCount: 1, list: 1 /* { $slice: ['$list', 50] } */ } }, // payload bloat ঠেকাতে limit
-  //             ]
-  //           : [],
-  //       },
-  //     },
-  //   ]);
-  // }
-
-  // // ── Ticket collection-এর উপর single pass, total/priority/status/type count ──
-  // async getDashboardTicketFacet(match: Record<string, any>) {
-  //   return this.ticketModel.aggregate([
-  //     { $match: match },
-  //     {
-  //       $facet: {
-  //         total: [{ $count: 'count' }],
-  //         byPriority: [{ $group: { _id: '$priority', count: { $sum: 1 } } }],
-  //         byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
-  //         byType: [{ $group: { _id: '$ticketType', count: { $sum: 1 } } }],
-  //       },
-  //     },
-  //   ]);
-  // }
-
-  // // ── overloaded/available user-দের জন্য হালকা _id-based lookup, শুধু name/email/photo ──
-  // // (heavy facet pipeline-এর ভিতরে এই join না দিয়ে আলাদা ছোট query রাখা হয়েছে — lighter, debug সহজ)
-  // async getUsersByIds(ids: Types.ObjectId[]) {
-  //   return this.userModel
-  //     .find({ _id: { $in: ids }, isDeleted: false }, { name: 1, email: 1, photo: 1 })
-  //     .lean();
-  // }
 
   async getDashboardTaskFacet(
   match: Record<string, any>,
