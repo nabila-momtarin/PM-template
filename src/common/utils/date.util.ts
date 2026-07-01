@@ -1,5 +1,3 @@
-// FILE: src/common/utils/date.util.ts
-// নতুন ফাইল হলে এই নামেই বানাও, existing date util থাকলে এখানে function যোগ করো
 // PURPOSE: officeHour হিসাব করতে date-range-এর মধ্যে working days (Sat/Sun বাদে) count করা
 
 export function getWorkingDaysCount(start: Date, end: Date): number {
@@ -16,3 +14,4 @@ export function getWorkingDaysCount(start: Date, end: Date): number {
 }
 
 // usage: officeHour = getWorkingDaysCount(startDate, endDate) * 8
+//  0=Sunday, 1=Monday, 2=Tuesday, 3=Wednessday, 4=Thursday, 5=Friday, 6=Saturday

@@ -96,17 +96,18 @@ function parseDashboardFilter(filterRaw?: string) {
     throw new BadRequestException('filter must contain either "and" or "or", not both');
   }
  
-  const isOr = 'or' in decoded;
-  const group = decoded.and ?? decoded.or ?? {};
-  const mongoOp = isOr ? '$or' : '$and';
+  const isOr = 'or' in decoded; 
+  const group = decoded.and ?? decoded.or ?? {}; //decoded filter as a obj store kortese, and thgakle and,naile or, naile {} 
+  const mongoOp = isOr ? '$or' : '$and'; // group e pawa obj k mongodb te query korar formate korte hobe based on isOR (true hoile OR diye query)
   const { projectId, userId } = group;
  
   // exact date দিলে gte/lte দুটোই সেই date → single-day range
   const gte = group['task.dueDate__gte'] ?? group['task.dueDate'];
   const lte = group['task.dueDate__lte'] ?? group['task.dueDate'];
-  const rangeStart = gte ? new Date(new Date(gte).setHours(0, 0, 0, 0)) : undefined;
-  const rangeEnd = lte ? new Date(new Date(lte).setHours(23, 59, 59, 999)) : undefined;
+  const rangeStart = gte ? new Date(new Date(gte).setHours(0, 0, 0, 0)) : undefined; //দিনের একদম শুরু (রাত ১২:০০:০০.০০০)
+  const rangeEnd = lte ? new Date(new Date(lte).setHours(23, 59, 59, 999)) : undefined; //দিনের একদম শেষ (রাত ১১:৫৯:৫৯.৯৯৯)
  
+  //dueDate er condition set
   const dueDateCond = rangeStart || rangeEnd
     ? { dueDate: { ...(rangeStart && { $gte: rangeStart }), ...(rangeEnd && { $lte: rangeEnd }) } }
     : null;
