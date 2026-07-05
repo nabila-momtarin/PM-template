@@ -135,7 +135,7 @@ export class SummaryRepository {
                 $expr: { $and: [{ $eq: ['$_id', '$$ticketId'] }, { $eq: ['$isDeleted', false] }] },
               },
             },
-            { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1, status: 1 } },
+            { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1, status: 1, ticketType: 1 } },
           ],
           as: 'ticketData',
         },
