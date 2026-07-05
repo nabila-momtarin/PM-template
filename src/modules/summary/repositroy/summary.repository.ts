@@ -171,6 +171,7 @@ export class SummaryRepository {
                     title: '$$t.title',
                     priority: '$$t.priority',
                     dueDate: '$$t.dueDate',
+                    ticketType: '$$t.ticketType',
                   },
                   else: null,
                 },
