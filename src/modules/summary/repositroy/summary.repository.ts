@@ -63,6 +63,7 @@ export class SummaryRepository {
           _id: { userId: '$_id', taskId: '$tasks._id' },
           userName: { $first: '$name' },
           userPhoto: { $first: '$photo' },
+          userCreatedAt: { $first: '$createdAt' },
           estimatedTime: { $first: '$tasks.estimatedTime' },
           taskStatus: { $first: '$tasks.status' },
           taskTitle: { $first: '$tasks.title' },
@@ -91,6 +92,7 @@ export class SummaryRepository {
           _id: '$_id.userId',
           name: { $first: '$userName' },
           photo: { $first: '$userPhoto' },
+          createdAt: { $first: '$userCreatedAt' },
           totalEstimatedMins: { $sum: { $ifNull: ['$estimatedTime', 0] } },
           totalWorktimeMs: { $sum: '$worktimeMs' },
           totalTaskCount: { $sum: { $cond: [{ $ifNull: ['$_id.taskId', false] }, 1, 0] } },
@@ -138,6 +140,7 @@ export class SummaryRepository {
           as: 'ticketData',
         },
       },
+      {$sort: { createdAt: -1 }},
       {
         $project: {
           _id: 0,
