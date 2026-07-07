@@ -382,6 +382,7 @@ export class SummaryService {
     try {
       const start = startDate ? new Date(startDate) : undefined;
       const end = endDate ? new Date(endDate) : undefined;
+      if (end) end.setHours(23, 59, 59, 999); //new
 
       const rawEntries = await this.summaryRepository.getWorktimeOverviewAgg(start, end);
       const items = aggregateWorktimeOverview(rawEntries, start, end);
@@ -433,6 +434,7 @@ export class SummaryService {
     try {
       const start = startDate ? new Date(startDate) : undefined;
       const end = endDate ? new Date(endDate) : undefined;
+      if (end) end.setHours(23, 59, 59, 999); //new
 
       const rawEntries = await this.summaryRepository.getUserWorktimeOverviewAgg(
         userId,
