@@ -478,6 +478,7 @@ export class SummaryService {
       }
 
       const { ticketId, ...rest } = task as any;
+      console.log('Active task:', { ...rest, ticket: ticketId ?? null });
       return {
         success: true,
         message: 'Active task fetched successfully',
