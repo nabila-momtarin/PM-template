@@ -28,7 +28,7 @@ export class SummaryRepository {
             { $lte: ['$tasks.worktime.startTime', end] },
           ]
         : [];
-//hi bye
+    //hi bye
     return this.userModel.aggregate([
       {
         $match: {
@@ -135,12 +135,22 @@ export class SummaryRepository {
                 $expr: { $and: [{ $eq: ['$_id', '$$ticketId'] }, { $eq: ['$isDeleted', false] }] },
               },
             },
-            { $project: { _id: 1, ticketNumber: 1, title: 1, priority: 1, dueDate: 1, status: 1, ticketType: 1 } },
+            {
+              $project: {
+                _id: 1,
+                ticketNumber: 1,
+                title: 1,
+                priority: 1,
+                dueDate: 1,
+                status: 1,
+                ticketType: 1,
+              },
+            },
           ],
           as: 'ticketData',
         },
       },
-      {$sort: { createdAt: -1 }},
+      { $sort: { createdAt: -1 } },
       {
         $project: {
           _id: 0,
@@ -640,33 +650,63 @@ export class SummaryRepository {
     ]);
   }
 
+  // Overlap match: an entry belongs to the range if it starts on/before `end`
+  // AND (it's still open, OR it ends on/after `start`). This differs from
+  // filtering on `startTime` alone — a session that starts before `start`
+  // but is still running (or ends after `start`) must be included, otherwise
+  // the portion of it that falls inside the range is silently dropped.
+  // Day-bucketing itself happens in the service layer, since a single entry
+  // can span multiple local calendar days.
+  private buildWorktimeOverlapMatch(start?: Date, end?: Date) {
+    if (!start || !end) return [];
+    return [
+      {
+        $match: {
+          'worktime.startTime': { $lte: end },
+          $or: [{ 'worktime.endTime': { $gte: start } }, { 'worktime.endTime': null }],
+        },
+      },
+    ];
+  }
+
   async getWorktimeOverviewAgg(start?: Date, end?: Date): Promise<any[]> {
     return this.taskModel.aggregate([
       { $match: { isDeleted: false } },
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
-      ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
-      {
-        $group: {
-          _id: {
-            date: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
-            taskId: '$_id',
-          },
-          estimatedTimeMins: { $first: { $ifNull: ['$estimatedTime', 0] } },
-          worktimeMs: {
-            $sum: {
-              $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
-            },
-          },
+      // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
+      ...this.buildWorktimeOverlapMatch(start, end),
+       {
+        $project: {
+          _id: 0,
+          taskId: '$_id',
+          estimatedTime: { $ifNull: ['$estimatedTime', 0] },
+          dueDate: { $ifNull: ['$dueDate', null] },
+          startTime: '$worktime.startTime',
+          endTime: '$worktime.endTime',
         },
       },
-      {
-        $group: {
-          _id: '$_id.date',
-          worktimeMs: { $sum: '$worktimeMs' },
-          estimatedTimeMins: { $sum: '$estimatedTimeMins' },
-        },
-      },
-      { $sort: { _id: 1 } },
+      // {
+      //   $group: {
+      //     _id: {
+      //       date: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
+      //       taskId: '$_id',
+      //     },
+      //     estimatedTimeMins: { $first: { $ifNull: ['$estimatedTime', 0] } },
+      //     worktimeMs: {
+      //       $sum: {
+      //         $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
+      //       },
+      //     },
+      //   },
+      // },
+      // {
+      //   $group: {
+      //     _id: '$_id.date',
+      //     worktimeMs: { $sum: '$worktimeMs' },
+      //     estimatedTimeMins: { $sum: '$estimatedTimeMins' },
+      //   },
+      // },
+      // { $sort: { _id: 1 } },
     ]);
   }
 
@@ -680,6 +720,16 @@ export class SummaryRepository {
       },
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
       ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
+      //  {
+      //   $project: {
+      //     _id: 0,
+      //     taskId: '$_id',
+      //     estimatedTime: { $ifNull: ['$estimatedTime', 0] },
+      //     dueDate: { $ifNull: ['$dueDate', null] },
+      //     startTime: '$worktime.startTime',
+      //     endTime: '$worktime.endTime',
+      //   },
+      // },
       {
         $group: {
           _id: {
@@ -767,252 +817,273 @@ export class SummaryRepository {
   }
 
   async getDashboardTaskFacet(
-  match: Record<string, any>,
-  now: Date,
-  hasFullRange: boolean,
-  rangeStart?: Date,
-  rangeEnd?: Date,
-) {
-  return this.taskModel.aggregate([
-    // raw field-এ filter সবার আগে — lookup/transform-এর পরে দিলে silently broken হয় (audit learning)
-    { $match: match },
- 
-    // দরকারি field রাখা + ticketId কে ObjectId-এ cast (একবারেই, সব branch reuse করবে)
-    // কিছু পুরনো task-এ ticketId string হিসেবে stored — $convert দিয়ে নিরাপদে handle
-    {
-      $project: {
-        status: 1,
-        dueDate: 1,
-        estimatedTime: 1,
-        worktime: 1,
-        assignee: 1,
-        ticketId: 1,
-        taskNumber: 1,
-        title: 1,
-        ticketObjectId: {
-          $convert: { input: '$ticketId', to: 'objectId', onError: null, onNull: null },
+    match: Record<string, any>,
+    now: Date,
+    hasFullRange: boolean,
+    rangeStart?: Date,
+    rangeEnd?: Date,
+  ) {
+    return this.taskModel.aggregate([
+      // raw field-এ filter সবার আগে — lookup/transform-এর পরে দিলে silently broken হয় (audit learning)
+      { $match: match },
+
+      // দরকারি field রাখা + ticketId কে ObjectId-এ cast (একবারেই, সব branch reuse করবে)
+      // কিছু পুরনো task-এ ticketId string হিসেবে stored — $convert দিয়ে নিরাপদে handle
+      {
+        $project: {
+          status: 1,
+          dueDate: 1,
+          estimatedTime: 1,
+          worktime: 1,
+          assignee: 1,
+          ticketId: 1,
+          taskNumber: 1,
+          title: 1,
+          ticketObjectId: {
+            $convert: { input: '$ticketId', to: 'objectId', onError: null, onNull: null },
+          },
         },
       },
-    },
- 
-    {
-      $facet: {
-        // ── মোট task count ──
-        total: [{ $count: 'count' }],
- 
-        // ── status-wise group ──
-        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
- 
-        // ── dueDate পার, এখনো Completed না ──
-        overdue: [
-          { $match: { dueDate: { $lt: now }, status: { $ne: 'Completed' } } },
-          { $count: 'count' },
-        ],
- 
-        // ── ticket join করে priority (priority Task-এ নাই, Ticket থেকে derive) ──
-        byPriority: [
-          { $lookup: { from: 'tickets', localField: 'ticketObjectId', foreignField: '_id', as: 'ticket' } },
-          { $unwind: { path: '$ticket', preserveNullAndEmptyArrays: true } },
-          { $group: { _id: '$ticket.priority', count: { $sum: 1 } } },
-        ],
- 
-        // ── estimatedTime + worktime sum (workload card) ──
-        workload: [
-          {
-            $project: {
-              estimatedTime: 1,
-              worktimeMs: {
-                $sum: {
-                  $map: {
-                    input: { $ifNull: ['$worktime', []] },
-                    as: 'w',
-                    // endTime null = এখনো চলছে, $$NOW দিয়ে live session-ও count
-                    in: { $subtract: [{ $ifNull: ['$$w.endTime', '$$NOW'] }, '$$w.startTime'] },
+
+      {
+        $facet: {
+          // ── মোট task count ──
+          total: [{ $count: 'count' }],
+
+          // ── status-wise group ──
+          byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+
+          // ── dueDate পার, এখনো Completed না ──
+          overdue: [
+            { $match: { dueDate: { $lt: now }, status: { $ne: 'Completed' } } },
+            { $count: 'count' },
+          ],
+
+          // ── ticket join করে priority (priority Task-এ নাই, Ticket থেকে derive) ──
+          byPriority: [
+            {
+              $lookup: {
+                from: 'tickets',
+                localField: 'ticketObjectId',
+                foreignField: '_id',
+                as: 'ticket',
+              },
+            },
+            { $unwind: { path: '$ticket', preserveNullAndEmptyArrays: true } },
+            { $group: { _id: '$ticket.priority', count: { $sum: 1 } } },
+          ],
+
+          // ── estimatedTime + worktime sum (workload card) ──
+          workload: [
+            {
+              $project: {
+                estimatedTime: 1,
+                worktimeMs: {
+                  $sum: {
+                    $map: {
+                      input: { $ifNull: ['$worktime', []] },
+                      as: 'w',
+                      // endTime null = এখনো চলছে, $$NOW দিয়ে live session-ও count
+                      in: { $subtract: [{ $ifNull: ['$$w.endTime', '$$NOW'] }, '$$w.startTime'] },
+                    },
                   },
                 },
               },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              totalEstimatedMins: { $sum: '$estimatedTime' },
-              totalWorktimeMs: { $sum: '$worktimeMs' },
+            {
+              $group: {
+                _id: null,
+                totalEstimatedMins: { $sum: '$estimatedTime' },
+                totalWorktimeMs: { $sum: '$worktimeMs' },
+              },
+            },
+          ],
+
+          // ── date-wise worktime group (range দেওয়া না-দেওয়া নির্বিশেষে সবসময় চলে) ──
+          taskHistory: [
+            { $unwind: '$worktime' },
+            {
+              $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
+                totalWorkTimeMs: {
+                  $sum: {
+                    $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
+                  },
+                },
+                totalEstimatedMins: { $sum: '$estimatedTime' },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+
+          // ── assignee-wise estimatedTime sum (overloaded/available-এর জন্য) — শুধু range থাকলে ──
+          userWorkload: hasFullRange
+            ? [{ $group: { _id: '$assignee', totalEstimatedMins: { $sum: '$estimatedTime' } } }]
+            : [],
+
+          // ── matched task-গুলোর parent ticketId — Ticket facet এই দিয়েই scope হবে ──
+          ticketIds: [{ $group: { _id: null, ids: { $addToSet: '$ticketObjectId' } } }],
+
+          // ── anomalyTicket-এর candidate ticketId ──
+          // condition: worktime session আছে (started, complete হোক বা না হোক)
+          //            AND সেই session range-এর ভিতরে
+          // Ticket facet এই ids নিয়ে verify করবে ticket dueDate range-এর পরে কিনা
+          anomalyTaskTicketIds: hasFullRange
+            ? [
+                {
+                  $match: {
+                    worktime: { $elemMatch: { startTime: { $gte: rangeStart, $lte: rangeEnd } } },
+                  },
+                },
+                { $group: { _id: null, ids: { $addToSet: '$ticketObjectId' } } },
+              ]
+            : [],
+
+          // ── [COMMENTED OUT] পুরনো anomalyTask (task-based ছিল, ticket-based-এ migrate হয়েছে) ──
+          // anomalyTask: hasFullRange
+          //   ? [
+          //       { $match: { dueDate: { $gt: rangeEnd } } },
+          //       { $match: { worktime: { $elemMatch: { startTime: { $gte: rangeStart, $lte: rangeEnd } } } } },
+          //       {
+          //         $group: {
+          //           _id: null,
+          //           totalCount: { $sum: 1 },
+          //           list: { $push: { _id: '$_id', taskNumber: '$taskNumber', title: '$title', dueDate: '$dueDate' } },
+          //         },
+          //       },
+          //       { $project: { totalCount: 1, list: 1 } },
+          //     ]
+          //   : [],
+
+          // ── [COMMENTED OUT] পুরনো ignoredTask (task-based ছিল, ticket-based-এ migrate হয়েছে) ──
+          // ignoredTask: hasFullRange
+          //   ? [
+          //       {
+          //         $match: {
+          //           dueDate: { $gte: rangeStart, $lte: rangeEnd },
+          //           $or: [{ worktime: { $exists: false } }, { worktime: { $size: 0 } }],
+          //         },
+          //       },
+          //       {
+          //         $group: {
+          //           _id: null,
+          //           totalCount: { $sum: 1 },
+          //           list: { $push: { _id: '$_id', taskNumber: '$taskNumber', title: '$title', dueDate: '$dueDate' } },
+          //         },
+          //       },
+          //       { $project: { totalCount: 1, list: 1 } },
+          //     ]
+          //   : [],
+        },
+      },
+    ]);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // Call 2: Ticket collection — single pass, $facet দিয়ে ticket metric + anomalyTicket
+  // ════════════════════════════════════════════════════════
+  async getDashboardTicketFacet(
+    match: Record<string, any>,
+    anomalyTicketIds: Types.ObjectId[],
+    hasFullRange: boolean,
+    rangeEnd?: Date,
+  ) {
+    return this.ticketModel.aggregate([
+      { $match: match },
+      {
+        $facet: {
+          // ── মোট ticket count ──
+          total: [{ $count: 'count' }],
+
+          // ── priority / status / type group ──
+          byPriority: [{ $group: { _id: '$priority', count: { $sum: 1 } } }],
+          byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+          byType: [{ $group: { _id: '$ticketType', count: { $sum: 1 } } }],
+
+          // ── ANOMALY TICKET ──
+          // condition: ticket dueDate range-এর পরে
+          //            AND এই ticket-এর under-এ কোনো task range-এর ভিতরে worktime করেছে
+          // (anomalyTicketIds = Task facet থেকে আসা candidate ids)
+          anomalyTicket:
+            hasFullRange && anomalyTicketIds.length
+              ? [
+                  {
+                    $match: {
+                      _id: { $in: anomalyTicketIds },
+                      dueDate: { $gt: rangeEnd },
+                    },
+                  },
+                  {
+                    $group: {
+                      _id: null,
+                      totalCount: { $sum: 1 },
+                      list: {
+                        $push: {
+                          _id: '$_id',
+                          ticketNumber: '$ticketNumber',
+                          title: '$title',
+                          dueDate: '$dueDate',
+                        },
+                      },
+                    },
+                  },
+                ]
+              : [],
+        },
+      },
+    ]);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // Call 3: ignoredTicket — আলাদা method রাখতে হচ্ছে কারণ $match আলাদা
+  // getDashboardTicketFacet শুরু হয় matchedTicketIds দিয়ে (task-derived scope)
+  // কিন্তু ignoredTicket দরকার dueDate range-এর সব ticket — $facet-এর branch হিসেবে রাখা যাবে না
+  // (একই $facet-এর সব branch একই initial $match share করে — MongoDB-র constraint)
+  // ════════════════════════════════════════════════════════
+  async getIgnoredTickets(rangeStart: Date, rangeEnd: Date) {
+    return this.ticketModel.aggregate([
+      // dueDate range-এর ভিতরে সব non-deleted ticket
+      { $match: { isDeleted: false, dueDate: { $gte: rangeStart, $lte: rangeEnd } } },
+
+      // Task collection-এ join — filter ছাড়া, শুধু ticketId existence check
+      // $limit: 1 দিয়ে early exit — task আছে কিনা জানলেই হবে, সব task লাগবে না
+      {
+        $lookup: {
+          from: 'tasks',
+          localField: '_id',
+          foreignField: 'ticketId',
+          pipeline: [{ $match: { isDeleted: false } }, { $limit: 1 }],
+          as: 'tasks',
+        },
+      },
+
+      // task array empty = কোনো task create হয়নি = ignoredTicket
+      { $match: { tasks: { $size: 0 } } },
+
+      {
+        $group: {
+          _id: null,
+          totalCount: { $sum: 1 },
+          list: {
+            $push: {
+              _id: '$_id',
+              ticketNumber: '$ticketNumber',
+              title: '$title',
+              dueDate: '$dueDate',
             },
           },
-        ],
- 
-        // ── date-wise worktime group (range দেওয়া না-দেওয়া নির্বিশেষে সবসময় চলে) ──
-        taskHistory: [
-          { $unwind: '$worktime' },
-          {
-            $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
-              totalWorkTimeMs: {
-                $sum: { $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'] },
-              },
-              totalEstimatedMins: { $sum: '$estimatedTime' },
-            },
-          },
-          { $sort: { _id: 1 } },
-        ],
- 
-        // ── assignee-wise estimatedTime sum (overloaded/available-এর জন্য) — শুধু range থাকলে ──
-        userWorkload: hasFullRange
-          ? [{ $group: { _id: '$assignee', totalEstimatedMins: { $sum: '$estimatedTime' } } }]
-          : [],
- 
-        // ── matched task-গুলোর parent ticketId — Ticket facet এই দিয়েই scope হবে ──
-        ticketIds: [{ $group: { _id: null, ids: { $addToSet: '$ticketObjectId' } } }],
- 
-        // ── anomalyTicket-এর candidate ticketId ──
-        // condition: worktime session আছে (started, complete হোক বা না হোক)
-        //            AND সেই session range-এর ভিতরে
-        // Ticket facet এই ids নিয়ে verify করবে ticket dueDate range-এর পরে কিনা
-        anomalyTaskTicketIds: hasFullRange
-          ? [
-              {
-                $match: {
-                  worktime: { $elemMatch: { startTime: { $gte: rangeStart, $lte: rangeEnd } } },
-                },
-              },
-              { $group: { _id: null, ids: { $addToSet: '$ticketObjectId' } } },
-            ]
-          : [],
- 
-        // ── [COMMENTED OUT] পুরনো anomalyTask (task-based ছিল, ticket-based-এ migrate হয়েছে) ──
-        // anomalyTask: hasFullRange
-        //   ? [
-        //       { $match: { dueDate: { $gt: rangeEnd } } },
-        //       { $match: { worktime: { $elemMatch: { startTime: { $gte: rangeStart, $lte: rangeEnd } } } } },
-        //       {
-        //         $group: {
-        //           _id: null,
-        //           totalCount: { $sum: 1 },
-        //           list: { $push: { _id: '$_id', taskNumber: '$taskNumber', title: '$title', dueDate: '$dueDate' } },
-        //         },
-        //       },
-        //       { $project: { totalCount: 1, list: 1 } },
-        //     ]
-        //   : [],
- 
-        // ── [COMMENTED OUT] পুরনো ignoredTask (task-based ছিল, ticket-based-এ migrate হয়েছে) ──
-        // ignoredTask: hasFullRange
-        //   ? [
-        //       {
-        //         $match: {
-        //           dueDate: { $gte: rangeStart, $lte: rangeEnd },
-        //           $or: [{ worktime: { $exists: false } }, { worktime: { $size: 0 } }],
-        //         },
-        //       },
-        //       {
-        //         $group: {
-        //           _id: null,
-        //           totalCount: { $sum: 1 },
-        //           list: { $push: { _id: '$_id', taskNumber: '$taskNumber', title: '$title', dueDate: '$dueDate' } },
-        //         },
-        //       },
-        //       { $project: { totalCount: 1, list: 1 } },
-        //     ]
-        //   : [],
+        },
       },
-    },
-  ]);
-}
- 
-// ════════════════════════════════════════════════════════
-// Call 2: Ticket collection — single pass, $facet দিয়ে ticket metric + anomalyTicket
-// ════════════════════════════════════════════════════════
-async getDashboardTicketFacet(
-  match: Record<string, any>,
-  anomalyTicketIds: Types.ObjectId[],
-  hasFullRange: boolean,
-  rangeEnd?: Date,
-) {
-  return this.ticketModel.aggregate([
-    { $match: match },
-    {
-      $facet: {
-        // ── মোট ticket count ──
-        total: [{ $count: 'count' }],
- 
-        // ── priority / status / type group ──
-        byPriority: [{ $group: { _id: '$priority', count: { $sum: 1 } } }],
-        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
-        byType: [{ $group: { _id: '$ticketType', count: { $sum: 1 } } }],
- 
-        // ── ANOMALY TICKET ──
-        // condition: ticket dueDate range-এর পরে
-        //            AND এই ticket-এর under-এ কোনো task range-এর ভিতরে worktime করেছে
-        // (anomalyTicketIds = Task facet থেকে আসা candidate ids)
-        anomalyTicket: hasFullRange && anomalyTicketIds.length
-          ? [
-              {
-                $match: {
-                  _id: { $in: anomalyTicketIds },
-                  dueDate: { $gt: rangeEnd },
-                },
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalCount: { $sum: 1 },
-                  list: { $push: { _id: '$_id', ticketNumber: '$ticketNumber', title: '$title', dueDate: '$dueDate' } },
-                },
-              },
-            ]
-          : [],
-      },
-    },
-  ]);
-}
- 
-// ════════════════════════════════════════════════════════
-// Call 3: ignoredTicket — আলাদা method রাখতে হচ্ছে কারণ $match আলাদা
-// getDashboardTicketFacet শুরু হয় matchedTicketIds দিয়ে (task-derived scope)
-// কিন্তু ignoredTicket দরকার dueDate range-এর সব ticket — $facet-এর branch হিসেবে রাখা যাবে না
-// (একই $facet-এর সব branch একই initial $match share করে — MongoDB-র constraint)
-// ════════════════════════════════════════════════════════
-async getIgnoredTickets(rangeStart: Date, rangeEnd: Date) {
-  return this.ticketModel.aggregate([
-    // dueDate range-এর ভিতরে সব non-deleted ticket
-    { $match: { isDeleted: false, dueDate: { $gte: rangeStart, $lte: rangeEnd } } },
- 
-    // Task collection-এ join — filter ছাড়া, শুধু ticketId existence check
-    // $limit: 1 দিয়ে early exit — task আছে কিনা জানলেই হবে, সব task লাগবে না
-    {
-      $lookup: {
-        from: 'tasks',
-        localField: '_id',
-        foreignField: 'ticketId',
-        pipeline: [
-          { $match: { isDeleted: false } },
-          { $limit: 1 },
-        ],
-        as: 'tasks',
-      },
-    },
- 
-    // task array empty = কোনো task create হয়নি = ignoredTicket
-    { $match: { tasks: { $size: 0 } } },
- 
-    {
-      $group: {
-        _id: null,
-        totalCount: { $sum: 1 },
-        list: { $push: { _id: '$_id', ticketNumber: '$ticketNumber', title: '$title', dueDate: '$dueDate' } },
-      },
-    },
-  ]);
-}
- 
-// ════════════════════════════════════════════════════════
-// Call 4 (conditional): overloaded/available user-দের name/email/photo আনা
-// facet-এর ভিতরে $lookup না দিয়ে আলাদা রাখা — lighter, debug সহজ
-// ════════════════════════════════════════════════════════
-async getUsersByIds(ids: Types.ObjectId[]) {
-  return this.userModel
-    .find({ _id: { $in: ids }, isDeleted: false }, { name: 1, email: 1, photo: 1 })
-    .lean();
-}
+    ]);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // Call 4 (conditional): overloaded/available user-দের name/email/photo আনা
+  // facet-এর ভিতরে $lookup না দিয়ে আলাদা রাখা — lighter, debug সহজ
+  // ════════════════════════════════════════════════════════
+  async getUsersByIds(ids: Types.ObjectId[]) {
+    return this.userModel
+      .find({ _id: { $in: ids }, isDeleted: false }, { name: 1, email: 1, photo: 1 })
+      .lean();
+  }
 }
