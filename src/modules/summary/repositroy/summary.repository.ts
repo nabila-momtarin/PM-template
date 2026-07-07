@@ -675,7 +675,7 @@ export class SummaryRepository {
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
       // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
       ...this.buildWorktimeOverlapMatch(start, end),
-       {
+      {
         $project: {
           _id: 0,
           taskId: '$_id',
@@ -719,39 +719,41 @@ export class SummaryRepository {
         },
       },
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
-      ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
-      //  {
-      //   $project: {
-      //     _id: 0,
-      //     taskId: '$_id',
-      //     estimatedTime: { $ifNull: ['$estimatedTime', 0] },
-      //     dueDate: { $ifNull: ['$dueDate', null] },
-      //     startTime: '$worktime.startTime',
-      //     endTime: '$worktime.endTime',
+      // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
+       ...this.buildWorktimeOverlapMatch(start, end),
+      {
+        $project: {
+          _id: 0,
+          taskId: '$_id',
+          estimatedTime: { $ifNull: ['$estimatedTime', 0] },
+          dueDate: { $ifNull: ['$dueDate', null] },
+          startTime: '$worktime.startTime',
+          endTime: '$worktime.endTime',
+        },
+      },
+      //-----
+      // {
+      //   $group: {
+      //     _id: {
+      //       date: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
+      //       taskId: '$_id',
+      //     },
+      //     estimatedTimeMins: { $first: { $ifNull: ['$estimatedTime', 0] } },
+      //     worktimeMs: {
+      //       $sum: {
+      //         $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
+      //       },
+      //     },
       //   },
       // },
-      {
-        $group: {
-          _id: {
-            date: { $dateToString: { format: '%Y-%m-%d', date: '$worktime.startTime' } },
-            taskId: '$_id',
-          },
-          estimatedTimeMins: { $first: { $ifNull: ['$estimatedTime', 0] } },
-          worktimeMs: {
-            $sum: {
-              $subtract: [{ $ifNull: ['$worktime.endTime', '$$NOW'] }, '$worktime.startTime'],
-            },
-          },
-        },
-      },
-      {
-        $group: {
-          _id: '$_id.date',
-          worktimeMs: { $sum: '$worktimeMs' },
-          estimatedTimeMins: { $sum: '$estimatedTimeMins' },
-        },
-      },
-      { $sort: { _id: 1 } },
+      // {
+      //   $group: {
+      //     _id: '$_id.date',
+      //     worktimeMs: { $sum: '$worktimeMs' },
+      //     estimatedTimeMins: { $sum: '$estimatedTimeMins' },
+      //   },
+      // },
+      // { $sort: { _id: 1 } },
     ]);
   }
 
