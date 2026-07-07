@@ -15,16 +15,20 @@ export class SummaryRepository {
   private readonly logger = new Logger(SummaryRepository.name);
 
   async getUserSummaryAgg(
-  userFilterMatch: Record<string, any> | null,
-  taskFilterMatch: Record<string, any> | null,
-  now: Date,
-  start?: Date,
-  end?: Date,
-): Promise<any[]> {
-  // ── dueDate range টা task-level $match এ বসাচ্ছি, worktime-এর ভিতরে না ──
-  const dueDateRangeMatch =
-    start && end ? { dueDate: { $gte: start, $lte: end } } : null;
-
+    userFilterMatch: Record<string, any> | null,
+    taskFilterMatch: Record<string, any> | null,
+    now: Date,
+    start?: Date,
+    end?: Date,
+  ): Promise<any[]> {
+    const worktimeDateFilter =
+      start && end
+        ? [
+            { $gte: ['$tasks.worktime.startTime', start] },
+            { $lte: ['$tasks.worktime.startTime', end] },
+          ]
+        : [];
+//hi bye
     return this.userModel.aggregate([
       {
         $match: {
