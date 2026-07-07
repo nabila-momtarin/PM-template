@@ -13,62 +13,6 @@ export interface WorktimeDaySegment {
   ms: number;
 }
 
-export interface WorktimeRawEntry {
-  taskId: string;
-  estimatedTime: number; // minutes
-  dueDate: Date | null;
-  startTime: Date;
-  endTime: Date | null;
-}
-
-export interface WorktimeOverviewItem {
-  date: string;
-  workTimeHour: number;
-  estimatedTimeHour: number;
-}
-
-/**
- * Converts local calendar date string into real UTC boundary.
- * Example:
- * 2026-07-07 local start => 2026-07-06T18:00:00.000Z
- * 2026-07-07 local end   => 2026-07-07T17:59:59.999Z
- */
-export function localDateStringToUtcBoundary(
-  dateStr: string,
-  boundary: 'start' | 'end',
-  tzOffsetMinutes: number = LOCAL_TZ_OFFSET_MINUTES,
-): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-
-  if (!year || !month || !day) {
-    throw new Error(`Invalid date string: ${dateStr}`);
-  }
-
-  const localUtcMs =
-    boundary === 'start'
-      ? Date.UTC(year, month - 1, day, 0, 0, 0, 0)
-      : Date.UTC(year, month - 1, day, 23, 59, 59, 999);
-
-  return new Date(localUtcMs - tzOffsetMinutes * 60_000);
-}
-
-export function parseLocalDateRange(startDate?: string, endDate?: string) {
-  return {
-    start: startDate ? localDateStringToUtcBoundary(startDate, 'start') : undefined,
-    end: endDate ? localDateStringToUtcBoundary(endDate, 'end') : undefined,
-  };
-}
-
-
-/** Local calendar date string ('YYYY-MM-DD') for a given instant. */
-export function toLocalDateString(
-  date: Date,
-  tzOffsetMinutes: number = LOCAL_TZ_OFFSET_MINUTES,
-): string {
-  return new Date(date.getTime() + tzOffsetMinutes * 60_000).toISOString().slice(0, 10);
-}
-
-
 /**
  * Splits [startTime, endTime) into segments bucketed by local calendar date.
  * Duration math is done in UTC ms (timezone-agnostic); only the *date label*
@@ -110,8 +54,51 @@ export function splitWorktimeByLocalDay(
   return segments;
 }
 
+/** Local calendar date string ('YYYY-MM-DD') for a given instant. */
+export function toLocalDateString(
+  date: Date,
+  tzOffsetMinutes: number = LOCAL_TZ_OFFSET_MINUTES,
+): string {
+  return new Date(date.getTime() + tzOffsetMinutes * 60_000).toISOString().slice(0, 10);
+}
 
+// ── Query-boundary helpers ──────────────────────────────────────────────
+// A plain date string like "2026-07-07" from a query param, if passed
+// straight to `new Date(...)`, resolves to 00:00 UTC — which is 06:00 AM
+// in BDT (UTC+6), NOT the start of that local calendar day. Using that
+// directly as a range boundary silently cuts off most of the local day
+// (e.g. an `endDate` of "2026-07-07" would exclude worktime logged after
+// 6 AM BDT on the 7th). These two helpers convert a "YYYY-MM-DD" string
+// into the correct UTC instant for the start/end of that LOCAL day.
+export function localDayStart(
+  dateStr: string,
+  tzOffsetMinutes: number = LOCAL_TZ_OFFSET_MINUTES,
+): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) - tzOffsetMinutes * 60_000);
+}
 
+export function localDayEnd(
+  dateStr: string,
+  tzOffsetMinutes: number = LOCAL_TZ_OFFSET_MINUTES,
+): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0, 0) - tzOffsetMinutes * 60_000 - 1);
+}
+
+export interface WorktimeRawEntry {
+  taskId: string;
+  estimatedTime: number; // minutes
+  dueDate: Date | null;
+  startTime: Date;
+  endTime: Date | null;
+}
+
+export interface WorktimeOverviewItem {
+  date: string;
+  workTimeHour: number;
+  estimatedTimeHour: number;
+}
 
 /**
  * Pure transform: raw per-worktime-entry rows → per-local-day overview.
@@ -127,104 +114,41 @@ export function splitWorktimeByLocalDay(
  *
  * No DB access, no DI — pure function, easy to unit test in isolation.
  */
-// export function aggregateWorktimeOverview(
-//   rawEntries: WorktimeRawEntry[],
-//   start?: Date,
-//   end?: Date,
-// ): WorktimeOverviewItem[] {
-//   const now = new Date();
-//   const workTimeMsByDate = new Map<string, number>();
-//   const estimatedTimeByTask = new Map<string, number>();
-//   const dueDateByTask = new Map<string, Date | null>();
-
-//   const inRange = (date: string) => {
-//     if (!start || !end) return true;
-//     return date >= toLocalDateString(start) && date <= toLocalDateString(end);
-//   };
-
-//   for (const entry of rawEntries) {
-//     const taskId = String(entry.taskId);
-//     estimatedTimeByTask.set(taskId, entry.estimatedTime ?? 0);
-//     dueDateByTask.set(taskId, entry.dueDate ?? null);
-
-//     const segments = splitWorktimeByLocalDay(entry.startTime, entry.endTime ?? now);
-//     for (const { date, ms } of segments) {
-//       if (!inRange(date)) continue;
-//       workTimeMsByDate.set(date, (workTimeMsByDate.get(date) ?? 0) + ms);
-//     }
-//   }
-
-//   const estimatedTimeMinsByDate = new Map<string, number>();
-//   for (const [taskId, dueDate] of dueDateByTask) {
-//     if (!dueDate) continue;
-//     const date = toLocalDateString(dueDate);
-//     if (!inRange(date)) continue;
-
-//     const mins = estimatedTimeByTask.get(taskId) ?? 0;
-//     estimatedTimeMinsByDate.set(date, (estimatedTimeMinsByDate.get(date) ?? 0) + mins);
-//   }
-
-//   const allDates = new Set([...workTimeMsByDate.keys(), ...estimatedTimeMinsByDate.keys()]);
-
-//   return [...allDates].sort().map((date) => ({
-//     date,
-//     workTimeHour: Math.round(((workTimeMsByDate.get(date) ?? 0) / 3_600_000) * 100) / 100,
-//     estimatedTimeHour: Math.round(((estimatedTimeMinsByDate.get(date) ?? 0) / 60) * 100) / 100,
-//   }));
-// }
-
-//NEW 
 export function aggregateWorktimeOverview(
   rawEntries: WorktimeRawEntry[],
   start?: Date,
   end?: Date,
 ): WorktimeOverviewItem[] {
   const now = new Date();
-
   const workTimeMsByDate = new Map<string, number>();
-
-  // task-level estimated time. Same task multiple worktime row আসলেও once count হবে.
   const estimatedTimeByTask = new Map<string, number>();
   const dueDateByTask = new Map<string, Date | null>();
 
-  const startDateStr = start ? toLocalDateString(start) : undefined;
-  const endDateStr = end ? toLocalDateString(end) : undefined;
-
   const inRange = (date: string) => {
-    if (!startDateStr || !endDateStr) return true;
-    return date >= startDateStr && date <= endDateStr;
+    if (!start || !end) return true;
+    return date >= toLocalDateString(start) && date <= toLocalDateString(end);
   };
 
   for (const entry of rawEntries) {
     const taskId = String(entry.taskId);
-
     estimatedTimeByTask.set(taskId, entry.estimatedTime ?? 0);
     dueDateByTask.set(taskId, entry.dueDate ?? null);
 
-    // no worktime entry থাকলে শুধু estimatedTime count হবে, workTime না
-    if (!entry.startTime) continue;
-
     const segments = splitWorktimeByLocalDay(entry.startTime, entry.endTime ?? now);
-
     for (const { date, ms } of segments) {
       if (!inRange(date)) continue;
-
       workTimeMsByDate.set(date, (workTimeMsByDate.get(date) ?? 0) + ms);
     }
   }
 
   const estimatedTimeMinsByDate = new Map<string, number>();
-
   for (const [taskId, dueDate] of dueDateByTask) {
     if (!dueDate) continue;
-
-    const dueDateStr = toLocalDateString(dueDate);
-
-    // Strict rule: estimated time ONLY dueDate date এ যাবে
-    if (!inRange(dueDateStr)) continue;
+    const date = toLocalDateString(dueDate);
+    if (!inRange(date)) continue;
 
     const mins = estimatedTimeByTask.get(taskId) ?? 0;
-    estimatedTimeMinsByDate.set(dueDateStr, (estimatedTimeMinsByDate.get(dueDateStr) ?? 0) + mins);
+    estimatedTimeMinsByDate.set(date, (estimatedTimeMinsByDate.get(date) ?? 0) + mins);
   }
 
   const allDates = new Set([...workTimeMsByDate.keys(), ...estimatedTimeMinsByDate.keys()]);

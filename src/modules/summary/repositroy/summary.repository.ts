@@ -472,7 +472,7 @@ export class SummaryRepository {
       .exec();
   }
 
-  async getUserWorktimeInRangeAgg(start: Date, end: Date, sort?: string): Promise<any[]> {
+ async getUserWorktimeInRangeAgg(start: Date, end: Date, sort?: string): Promise<any[]> {
     return this.taskModel.aggregate([
       { $match: { isDeleted: false } },
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
@@ -650,55 +650,32 @@ export class SummaryRepository {
     ]);
   }
 
-  // Overlap match: an entry belongs to the range if it starts on/before `end`
+ // Overlap match: an entry belongs to the range if it starts on/before `end`
   // AND (it's still open, OR it ends on/after `start`). This differs from
   // filtering on `startTime` alone — a session that starts before `start`
   // but is still running (or ends after `start`) must be included, otherwise
   // the portion of it that falls inside the range is silently dropped.
   // Day-bucketing itself happens in the service layer, since a single entry
   // can span multiple local calendar days.
-  // private buildWorktimeOverlapMatch(start?: Date, end?: Date) {
-  //   if (!start || !end) return [];
-  //   return [
-  //     {
-  //       $match: {
-  //         'worktime.startTime': { $lte: end },
-  //         $or: [{ 'worktime.endTime': { $gte: start } }, { 'worktime.endTime': null }],
-  //       },
-  //     },
-  //   ];
-  // }
 
-  private buildTaskRangeMatch(start?: Date, end?: Date) {
-  if (!start || !end) return [];
-
-  return [
-    {
-      $match: {
-        $or: [
-          // estimatedTime dueDate date-e count hobe
-          { dueDate: { $gte: start, $lte: end } },
-
-          // worktime range-er sathe overlap korle include hobe
-          {
-            worktime: {
-              $elemMatch: {
-                startTime: { $lte: end },
-                $or: [{ endTime: { $gte: start } }, { endTime: null }],
-              },
-            },
-          },
-        ],
+  private buildWorktimeOverlapMatch(start?: Date, end?: Date) {
+    if (!start || !end) return [];
+    return [
+      {
+        $match: {
+          'worktime.startTime': { $lte: end },
+          $or: [{ 'worktime.endTime': { $gte: start } }, { 'worktime.endTime': null }],
+        },
       },
-    },
-  ];
-}
+    ];
+  }
+
 
   async getWorktimeOverviewAgg(start?: Date, end?: Date): Promise<any[]> {
     return this.taskModel.aggregate([
       { $match: { isDeleted: false } },
-      ...this.buildTaskRangeMatch(start, end),
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+      ...this.buildWorktimeOverlapMatch(start, end),
       // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
       {
         $project: {
@@ -743,8 +720,8 @@ export class SummaryRepository {
           isDeleted: false,
         },
       },
-      ...this.buildTaskRangeMatch(start, end),
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
+      ...this.buildWorktimeOverlapMatch(start, end),
       // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
       {
         $project: {

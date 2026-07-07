@@ -8,7 +8,7 @@ import { TicketPriority, TicketStatus, TicketType } from 'src/common/enums/ticke
 import { TaskStatus } from 'src/common/enums/task.enum';
 
 import { splitUserSummaryFilter, parseDashboardFilter } from '../utils/summary-filter.util';
-import { aggregateWorktimeOverview, parseLocalDateRange } from '../utils/worktim-split.util';
+import { aggregateWorktimeOverview,  localDayStart, localDayEnd } from '../utils/worktim-split.util';
 
 
 const TICKET_STATUS_ORDER = [
@@ -378,12 +378,10 @@ export class SummaryService {
   //   }
   // }
 
-   async getWorktimeOverview(startDate?: string, endDate?: string) {
+  async getWorktimeOverview(startDate?: string, endDate?: string) {
     try {
-      // const start = startDate ? new Date(startDate) : undefined;
-      // const end = endDate ? new Date(endDate) : undefined;
-      // if (end) end.setHours(23, 59, 59, 999); //new
-      const { start, end } = parseLocalDateRange(startDate, endDate);
+      const start = startDate ? localDayStart(startDate) : undefined;
+      const end = endDate ? localDayEnd(endDate) : undefined;
 
       const rawEntries = await this.summaryRepository.getWorktimeOverviewAgg(start, end);
       const items = aggregateWorktimeOverview(rawEntries, start, end);
@@ -431,13 +429,10 @@ export class SummaryService {
   // }
 
   //new
-    async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
+     async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
     try {
-      // const start = startDate ? new Date(startDate) : undefined;
-      // // if (start) start.setHours(0, 0, 0, 0); //new 2
-      // const end = endDate ? new Date(endDate) : undefined;
-      // if (end) end.setHours(23, 59, 59, 999); //new
-      const { start, end } = parseLocalDateRange(startDate, endDate);
+      const start = startDate ? localDayStart(startDate) : undefined;
+      const end = endDate ? localDayEnd(endDate) : undefined;
 
       const rawEntries = await this.summaryRepository.getUserWorktimeOverviewAgg(
         userId,
@@ -459,7 +454,6 @@ export class SummaryService {
       throw err;
     }
   }
-
 
   async getCurrentUserActiveTicket(userId: string) {
     try {
