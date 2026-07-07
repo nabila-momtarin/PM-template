@@ -400,51 +400,24 @@ export class SummaryService {
     }
   }
 
-  
-  async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
-    try {
-      const start = startDate ? new Date(startDate) : undefined;
-      const end = endDate ? new Date(endDate) : undefined;
-
-      const results = await this.summaryRepository.getUserWorktimeOverviewAgg(userId, start, end);
-
-      return {
-        success: true,
-        message: 'Worktime overview fetched successfully',
-        data: {
-          items: results.map((r) => ({
-            date: r._id,
-            workTimeHour: Math.round((r.worktimeMs / 3_600_000) * 100) / 100,
-            estimatedTimeHour: Math.round((r.estimatedTimeMins / 60) * 100) / 100,
-          })),
-        },
-      };
-    } catch (err) {
-      this.logger.error(
-        'SummaryService.getCurrentUserWorktimeOverview failed',
-        err instanceof Error ? err.stack : err,
-      );
-      throw err;
-    }
-  }
-
-  //new
-  //   async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
+//old  
+  // async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
   //   try {
   //     const start = startDate ? new Date(startDate) : undefined;
   //     const end = endDate ? new Date(endDate) : undefined;
 
-  //     const rawEntries = await this.summaryRepository.getUserWorktimeOverviewAgg(
-  //       userId,
-  //       start,
-  //       end,
-  //     );
-  //     const items = aggregateWorktimeOverview(rawEntries, start, end);
+  //     const results = await this.summaryRepository.getUserWorktimeOverviewAgg(userId, start, end);
 
   //     return {
   //       success: true,
   //       message: 'Worktime overview fetched successfully',
-  //       data: { items },
+  //       data: {
+  //         items: results.map((r) => ({
+  //           date: r._id,
+  //           workTimeHour: Math.round((r.worktimeMs / 3_600_000) * 100) / 100,
+  //           estimatedTimeHour: Math.round((r.estimatedTimeMins / 60) * 100) / 100,
+  //         })),
+  //       },
   //     };
   //   } catch (err) {
   //     this.logger.error(
@@ -454,6 +427,33 @@ export class SummaryService {
   //     throw err;
   //   }
   // }
+
+  //new
+    async getCurrentUserWorktimeOverview(userId: string, startDate?: string, endDate?: string) {
+    try {
+      const start = startDate ? new Date(startDate) : undefined;
+      const end = endDate ? new Date(endDate) : undefined;
+
+      const rawEntries = await this.summaryRepository.getUserWorktimeOverviewAgg(
+        userId,
+        start,
+        end,
+      );
+      const items = aggregateWorktimeOverview(rawEntries, start, end);
+
+      return {
+        success: true,
+        message: 'Worktime overview fetched successfully',
+        data: { items },
+      };
+    } catch (err) {
+      this.logger.error(
+        'SummaryService.getCurrentUserWorktimeOverview failed',
+        err instanceof Error ? err.stack : err,
+      );
+      throw err;
+    }
+  }
 
 
   async getCurrentUserActiveTicket(userId: string) {
