@@ -657,24 +657,49 @@ export class SummaryRepository {
   // the portion of it that falls inside the range is silently dropped.
   // Day-bucketing itself happens in the service layer, since a single entry
   // can span multiple local calendar days.
-  private buildWorktimeOverlapMatch(start?: Date, end?: Date) {
-    if (!start || !end) return [];
-    return [
-      {
-        $match: {
-          'worktime.startTime': { $lte: end },
-          $or: [{ 'worktime.endTime': { $gte: start } }, { 'worktime.endTime': null }],
-        },
+  // private buildWorktimeOverlapMatch(start?: Date, end?: Date) {
+  //   if (!start || !end) return [];
+  //   return [
+  //     {
+  //       $match: {
+  //         'worktime.startTime': { $lte: end },
+  //         $or: [{ 'worktime.endTime': { $gte: start } }, { 'worktime.endTime': null }],
+  //       },
+  //     },
+  //   ];
+  // }
+
+  private buildTaskRangeMatch(start?: Date, end?: Date) {
+  if (!start || !end) return [];
+
+  return [
+    {
+      $match: {
+        $or: [
+          // estimatedTime dueDate date-e count hobe
+          { dueDate: { $gte: start, $lte: end } },
+
+          // worktime range-er sathe overlap korle include hobe
+          {
+            worktime: {
+              $elemMatch: {
+                startTime: { $lte: end },
+                $or: [{ endTime: { $gte: start } }, { endTime: null }],
+              },
+            },
+          },
+        ],
       },
-    ];
-  }
+    },
+  ];
+}
 
   async getWorktimeOverviewAgg(start?: Date, end?: Date): Promise<any[]> {
     return this.taskModel.aggregate([
       { $match: { isDeleted: false } },
+      ...this.buildTaskRangeMatch(start, end),
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
       // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
-      ...this.buildWorktimeOverlapMatch(start, end),
       {
         $project: {
           _id: 0,
@@ -718,9 +743,9 @@ export class SummaryRepository {
           isDeleted: false,
         },
       },
+      ...this.buildTaskRangeMatch(start, end),
       { $unwind: { path: '$worktime', preserveNullAndEmptyArrays: false } },
       // ...(start && end ? [{ $match: { 'worktime.startTime': { $gte: start, $lte: end } } }] : []),
-       ...this.buildWorktimeOverlapMatch(start, end),
       {
         $project: {
           _id: 0,
