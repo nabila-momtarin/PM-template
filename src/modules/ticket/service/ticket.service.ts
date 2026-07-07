@@ -14,7 +14,7 @@ import { CounterService } from 'src/common/services/counter.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Task, TaskDocument } from 'src/modules/task/entities/task.schema';
 import { minsToHHMM, msToHHMM } from 'src/common/utils/time.utils';
-import { TicketQAStatus, TicketStatus  } from 'src/common/enums/ticket.enum';
+import { TicketQAStatus, TicketStatus } from 'src/common/enums/ticket.enum';
 
 @Injectable()
 export class TicketService {
@@ -31,7 +31,7 @@ export class TicketService {
     return `TKT-${seq}`;
   }
 
-// ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
   // NEW: shared rule resolver for QA-status auto-update
   // Source-aware: depends on the CURRENT status, not just the target.
   // Rules (from product spec / ticket transition image):
@@ -41,14 +41,13 @@ export class TicketService {
   //   4. QA In Progress    → Developed / In Progress                  => Not Tested
   //   5. Developed         → Any other column (catch-all)             => Not Tested
   // ─────────────────────────────────────────────────────────────
- private resolveAutoQaStatus(
+  private resolveAutoQaStatus(
     currentStatus: TicketStatus | undefined,
     targetStatus: TicketStatus,
   ): TicketQAStatus | undefined {
     if (currentStatus === TicketStatus.DEVELOPED && targetStatus === TicketStatus.QA_IN_PROGRESS) {
       return TicketQAStatus.NOT_TESTED;
     }
- 
     if (
       currentStatus === TicketStatus.QA_IN_PROGRESS &&
       [TicketStatus.READY_FOR_RELEASE, TicketStatus.RELEASED, TicketStatus.CLOSED].includes(
@@ -57,25 +56,20 @@ export class TicketService {
     ) {
       return TicketQAStatus.PASSED;
     }
- 
     if (currentStatus === TicketStatus.QA_IN_PROGRESS && targetStatus === TicketStatus.OPEN) {
       return TicketQAStatus.FAILED;
     }
- 
     if (
       currentStatus === TicketStatus.QA_IN_PROGRESS &&
       [TicketStatus.DEVELOPED, TicketStatus.IN_PROGRESS].includes(targetStatus)
     ) {
       return TicketQAStatus.NOT_TESTED;
     }
- 
     if (currentStatus === TicketStatus.DEVELOPED && targetStatus !== TicketStatus.DEVELOPED) {
       return TicketQAStatus.NOT_TESTED;
     }
- 
     return undefined;
   }
- 
   // ─────────────────────────────────────────────────────────────
   // Precondition check — only applies when transitioning TO 'Developed'.
   // Throws BadRequestException if any non-deleted, non-completed task is still linked to this ticket.
@@ -88,7 +82,6 @@ export class TicketService {
         status: { $ne: 'Completed' },
       })
       .lean();
- 
     if (incompleteTask) {
       this.logger.error(`Ticket ${ticketId} has incomplete task(s), cannot move to Developed`);
       throw new BadRequestException(
@@ -96,7 +89,6 @@ export class TicketService {
       );
     }
   }
- 
   // ─────────────────────────────────────────────────────────────
   // SHARED — used by all 7 change-status transitions:
   //   1. fetch ticket + not-found check
@@ -112,32 +104,36 @@ export class TicketService {
   // add another `if (targetStatus === '...')` branch below, following
   // the same pattern as the 'Developed' branch.
   // ─────────────────────────────────────────────────────────────
-   private async getTicketAndResolveQaStatus(ticketId: string, targetStatus: TicketStatus) {
+  private async getTicketAndResolveQaStatus(ticketId: string, targetStatus: TicketStatus) {
     const existingTicket = await this.ticketRepository.findById({
       id: ticketId,
       useLean: true,
     });
- 
+
     if (!existingTicket) {
       this.logger.error('Ticket not found');
       throw new NotFoundException('Ticket not found');
     }
- 
+
     if (targetStatus === TicketStatus.DEVELOPED) {
       await this.assertNoIncompleteTasks(ticketId);
     }
- 
+//TicktStatus.CLOSED happens only if TicketQQStatus.PASSED
+    if (targetStatus === TicketStatus.CLOSED && existingTicket.qaStatus !== TicketQAStatus.PASSED) {
+      this.logger.error(`Cannot close ticket — qaStatus is '${existingTicket.qaStatus}', must be 'Passed'`);
+      throw new BadRequestException('Ticket cannot be closed unless QA status is already Passed');
+    }
+
     const autoQaStatus = this.resolveAutoQaStatus(existingTicket.status, targetStatus);
- 
+
     return { existingTicket, autoQaStatus };
   }
- 
   // ─────────────────────────────────────────────────────────────
   // All 7 transitions below share the exact same shape:
   //   fetch + precondition + qaStatus resolve -> update -> shape response
   // Only the targetStatus  and response message differ.
   // ─────────────────────────────────────────────────────────────
- private async applyStatusChange(
+  private async applyStatusChange(
     ticketId: string,
     targetStatus: TicketStatus,
     currentUser: AuthenticatedUser,
@@ -145,9 +141,7 @@ export class TicketService {
     this.logger.log('BE HAPPY');
     try {
       this.logger.log(`ticketId: ${ticketId}`);
- 
       const { autoQaStatus } = await this.getTicketAndResolveQaStatus(ticketId, targetStatus);
- 
       const updatedTicket = await this.ticketRepository.updateByID(
         ticketId,
         {
@@ -160,14 +154,11 @@ export class TicketService {
           new: true,
         },
       );
- 
       if (!updatedTicket) {
         this.logger.error('Ticket not found or deleted during update');
         throw new NotFoundException('Ticket not found or deleted during update');
       }
- 
       this.logger.log(updatedTicket);
- 
       return {
         success: true,
         message: `Ticket status updated to ${targetStatus}`,
@@ -668,8 +659,6 @@ export class TicketService {
     }
   }
 
-
-
   //   async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
   //   this.logger.log('BE HAPPY');
   //   try {
@@ -1051,36 +1040,35 @@ export class TicketService {
   //   }
   // }
 
-  
   // ─────────────────────────────────────────────────────────────
   // All 7 transitions delegate to the shared applyStatusChange().
   // The 'Developed' precondition check (incomplete tasks) lives
   // inside getTicketAndResolveQaStatus() — see comment there.
   // ─────────────────────────────────────────────────────────────
- async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
+  async updateTicketToOpen(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.OPEN, currentUser);
   }
- 
+
   async updateTicketToInProgress(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.IN_PROGRESS, currentUser);
   }
- 
+
   async updateTicketToDeveloped(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.DEVELOPED, currentUser);
   }
- 
+
   async updateTicketToQaInProgress(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.QA_IN_PROGRESS, currentUser);
   }
- 
+
   async updateTicketToReadyForRelease(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.READY_FOR_RELEASE, currentUser);
   }
- 
+
   async updateTicketToReleased(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.RELEASED, currentUser);
   }
- 
+
   async updateTicketToClosed(ticketId: string, currentUser: AuthenticatedUser) {
     return this.applyStatusChange(ticketId, TicketStatus.CLOSED, currentUser);
   }
