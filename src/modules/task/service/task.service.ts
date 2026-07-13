@@ -71,31 +71,33 @@ export class TaskService {
         throw new NotFoundException('Project not found');
       }
 
-      // ── Case 1: validate or auto-link project depending on ticket's current state ──
-      const ticketProjects = ticket.projects ?? [];
+      // // ── Case 1: validate or auto-link project depending on ticket's current state ──
+      // const ticketProjects = ticket.projects ?? [];
 
-      if (ticketProjects.length > 0) {
-        // ── Case 1: project must be present in the ticket's projects[] ──
-        const projectIsLinkedToTicket = ticketProjects.some((p) => p.toString() === dto.projectId);
-        if (!projectIsLinkedToTicket) {
-          this.logger.error('Project is not associated with the given ticket');
-          throw new BadRequestException('Project is not associated with the given ticket');
-        }
-      } else {
-        // ── Case 2: auto-link the project to the ticket if it's not already linked ──
-        this.logger.log(
-          `Ticket ${dto.ticketId} has no associated project — linking ${dto.projectId}`,
-        );
+      // if (ticketProjects.length > 0) {
+      //   // ── Case 1: project must be present in the ticket's projects[] ──
+      //   const projectIsLinkedToTicket = ticketProjects.some((p) => p.toString() === dto.projectId);
+      //   if (!projectIsLinkedToTicket) {
+      //     this.logger.error('Project is not associated with the given ticket');
+      //     throw new BadRequestException('Project is not associated with the given ticket');
+      //   }
+      // } else {
+      //   // ── Case 2: auto-link the project to the ticket if it's not already linked ──
+      //   this.logger.log(
+      //     `Ticket ${dto.ticketId} has no associated project — linking ${dto.projectId}`,
+      //   );
 
-        const updateResult = await this.ticketModel.updateOne(
-          { _id: dto.ticketId, isDeleted: { $ne: true } },
-          { $addToSet: { projects: new Types.ObjectId(dto.projectId) } },
-        );
+      // }
 
-        if (updateResult.matchedCount === 0) {
-          this.logger.error('Ticket disappeared during auto-link');
-          throw new NotFoundException('Ticket not found');
-        }
+      //  ── Auto-link selected project to ticket (no check on existing linkage) ──
+      const updateResult = await this.ticketModel.updateOne(
+        { _id: dto.ticketId, isDeleted: { $ne: true } },
+        { $addToSet: { projects: new Types.ObjectId(dto.projectId) } },
+      );
+
+      if (updateResult.matchedCount === 0) {
+        this.logger.error('Ticket disappeared during auto-link');
+        throw new NotFoundException('Ticket not found');
       }
 
       if (dto.dueDate) {
@@ -642,8 +644,8 @@ export class TaskService {
   async getAnomalyTasks(startDate: string, endDate: string, page: number, limit: number) {
     try {
       const start = new Date(startDate);
-      const end   = new Date(endDate);
-      const skip  = (page - 1) * limit;
+      const end = new Date(endDate);
+      const skip = (page - 1) * limit;
 
       const [result] = await this.taskRepository.getAnomalyTasksAgg(start, end, skip, limit);
 
@@ -667,7 +669,10 @@ export class TaskService {
         },
       };
     } catch (err) {
-      this.logger.error('TaskService.getAnomalyTasks failed', err instanceof Error ? err.stack : err);
+      this.logger.error(
+        'TaskService.getAnomalyTasks failed',
+        err instanceof Error ? err.stack : err,
+      );
       throw err;
     }
   }
